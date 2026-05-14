@@ -1,0 +1,41 @@
+# ── Dependencias ──
+node_modules/
+
+# ── Variables de entorno ──
+.env
+.env.local
+.env.*.local
+
+# ── Logs ──
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Sistema operativo ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs y basura de editores ──
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── Build / compilados ──
+dist/
+build/
+
+# ── Sequelize ──
+
+
+# ── Misc ──
+*.pem
+.npm
+.eslintcache
