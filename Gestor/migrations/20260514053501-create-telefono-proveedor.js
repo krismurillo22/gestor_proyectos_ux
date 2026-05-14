@@ -26,6 +26,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('TelefonoProveedors');
+    await queryInterface.dropTable('TelefonoProveedores');
   }
 };
