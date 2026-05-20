@@ -75,6 +75,31 @@ const updateCliente = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// DELETE /api/clientes/:id
+const deleteCliente = async (req, res) => {
+   try {
+    const cliente = await Cliente.findByPk(req.params.id);
+
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const solicitudes = await Solicitud.count({
+      where: { id_cliente: req.params.id },
+    });
+
+    if (solicitudes > 0) {
+      return res.status(400).json({ 
+        error: 'No se puede eliminar el cliente porque tiene solicitudes registradas'
+      });
+    }
+
+    await cliente.destroy();
+    res.json({ message: 'Cliente eliminado exitosamente' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 
 
@@ -83,5 +108,5 @@ module.exports = {
   getClienteById,
   createCliente,
   updateCliente,
-  //deleteCliente,
+  deleteCliente,
 };
