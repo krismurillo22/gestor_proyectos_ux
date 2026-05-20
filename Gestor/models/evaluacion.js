@@ -40,7 +40,6 @@ module.exports = (sequelize) => {
       sequelize,
       modelName: 'Evaluacion',
       tableName: 'Evaluaciones',
-      timestamps: false,
     }
   );
 

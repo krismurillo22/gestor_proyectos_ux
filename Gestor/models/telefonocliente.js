@@ -31,8 +31,7 @@ module.exports = (sequelize) => {
     {
       sequelize,
       modelName: 'TelefonoCliente',
-      tableName: 'Telefonos_Clientes',
-      timestamps: false,
+      tableName: 'TelefonoClientes',
     }
   );
 
