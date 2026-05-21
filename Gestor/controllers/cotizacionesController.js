@@ -128,3 +128,53 @@ async function rechazarCotizacion(req, res) {
 }
 
 module.exports = { crearCotizacion, obtenerCotizacionPorId, aprobarCotizacion, rechazarCotizacion };
+
+// PUT: Modificar una cotización por ID (incluye reemplazo de detalles)
+async function modificarCotizacion(req, res) {
+  try {
+    const { id } = req.params;
+    const { id_solicitud, id_proveedor, total, estado, detalles } = req.body;
+
+    if (!id) return res.status(400).json({ ok: false, msg: 'ID de cotización requerido.' });
+
+    const cotizacion = await Cotizacion.findByPk(id);
+    if (!cotizacion) return res.status(404).json({ ok: false, msg: 'Cotización no encontrada.' });
+
+    // Actualizar campos si vienen en el body
+    if (id_solicitud !== undefined) cotizacion.id_solicitud = id_solicitud;
+    if (id_proveedor !== undefined) cotizacion.id_proveedor = id_proveedor;
+    if (total !== undefined) cotizacion.total = total;
+    if (estado !== undefined) cotizacion.estado = estado;
+
+    await cotizacion.save();
+
+    // Si vienen detalles, reemplazarlos: eliminar existentes y crear los nuevos
+    if (Array.isArray(detalles)) {
+      await DetalleCotizacion.destroy({ where: { cotizacion_id: cotizacion.id } });
+
+      const detallesToCreate = detalles.map(d => ({
+        cotizacion_id: cotizacion.id,
+        producto_id: d.producto_id || null,
+        cantidad: d.cantidad || 0,
+        precio_unitario: d.precio_unitario || 0,
+        descripcion: d.descripcion_item || null
+      }));
+
+      if (detallesToCreate.length) {
+        await DetalleCotizacion.bulkCreate(detallesToCreate);
+      }
+    }
+
+    // Obtener cotizacion actualizada con sus detalles
+    const cotizacionActualizada = await Cotizacion.findByPk(cotizacion.id, {
+      include: [{ model: DetalleCotizacion, as: 'detalles' }]
+    });
+
+    return res.status(200).json({ ok: true, cotizacion: cotizacionActualizada });
+  } catch (error) {
+    console.error('Error modificando cotización:', error);
+    return res.status(500).json({ ok: false, msg: 'Error interno modificando cotización.' });
+  }
+}
+
+module.exports = { crearCotizacion, obtenerCotizacionPorId, aprobarCotizacion, rechazarCotizacion, modificarCotizacion };
