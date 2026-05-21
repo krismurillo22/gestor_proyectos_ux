@@ -90,8 +90,58 @@ const createEvaluacion = async (req, res) => {
   }
 };
 
+// PUT /api/evaluaciones/:id
+const updateEvaluacion = async (req, res) => {
+  try {
+    const evaluacion = await Evaluacion.findByPk(req.params.id);
+
+    if (!evaluacion) {
+      return res.status(404).json({ error: 'Evaluación no encontrada' });
+    }
+
+    const { rating, descripcion } = req.body;
+
+    if (rating && (rating < 1 || rating > 5)) {
+      return res.status(400).json({
+        error: 'El rating debe estar entre 1 y 5',
+      });
+    }
+
+    await evaluacion.update({
+      rating,
+      descripcion,
+    });
+
+    res.json({
+      message: 'Evaluación actualizada exitosamente',
+      data: evaluacion,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// DELETE /api/evaluaciones/:id
+const deleteEvaluacion = async (req, res) => {
+  try {
+    const evaluacion = await Evaluacion.findByPk(req.params.id);
+
+    if (!evaluacion) {
+      return res.status(404).json({ error: 'Evaluación no encontrada' });
+    }
+
+    await evaluacion.destroy();
+
+    res.json({ message: 'Evaluación eliminada exitosamente' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getEvaluaciones,
   getEvaluacionById,
   createEvaluacion,
+  updateEvaluacion,
+  deleteEvaluacion,
 };
