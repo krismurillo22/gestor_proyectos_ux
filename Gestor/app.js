@@ -7,6 +7,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var clientesRouter = require('./routes/clientes');
 var proveedoresRouter = require('./routes/proveedores');
+var evaluacionesRouter = require('./routes/evaluaciones');
 //var solicitudesRouter = require('./routes/solicitudes');
 
 var app = express();
@@ -21,6 +22,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/api', clientesRouter);
 app.use('/api', proveedoresRouter);
+app.use('/api', evaluacionesRouter);
 //app.use('/api', solicitudesRouter);
 
 const { sequelize, Cliente, Solicitud, Cotizacion } = require('./models');
