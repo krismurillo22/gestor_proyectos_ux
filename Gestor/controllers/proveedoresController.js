@@ -87,9 +87,37 @@ const updateProveedor = async (req, res) => {
   }
 };
 
+// DELETE /api/proveedores/:id
+const deleteProveedor = async (req, res) => {
+  try {
+    const proveedor = await Proveedor.findByPk(req.params.id);
+
+    if (!proveedor) {
+      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    }
+
+    const cotizaciones = await Cotizacion.count({
+      where: { id_proveedor: req.params.id },
+    });
+
+    if (cotizaciones > 0) {
+      return res.status(400).json({
+        error: 'No se puede eliminar el proveedor porque tiene cotizaciones registradas',
+      });
+    }
+
+    await proveedor.destroy();
+
+    res.json({ message: 'Proveedor eliminado exitosamente' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getProveedores,
   getProveedorById,
   createProveedor,
-  updateProveedor
+  updateProveedor,
+  deleteProveedor
 };
