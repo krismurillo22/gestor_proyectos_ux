@@ -65,8 +65,31 @@ const createProveedor = async (req, res) => {
   }
 };
 
+// PUT /api/proveedores/:id
+const updateProveedor = async (req, res) => {
+  try {
+    const proveedor = await Proveedor.findByPk(req.params.id);
+
+    if (!proveedor) {
+      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    }
+
+    const { nombre, rtn } = req.body;
+
+    await proveedor.update({ nombre, rtn });
+
+    res.json({
+      message: 'Proveedor actualizado exitosamente',
+      data: proveedor,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getProveedores,
   getProveedorById,
-  createProveedor
+  createProveedor,
+  updateProveedor
 };
