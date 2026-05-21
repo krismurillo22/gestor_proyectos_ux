@@ -45,7 +45,28 @@ const getProveedorById = async (req, res) => {
   }
 };
 
+// POST /api/proveedores
+const createProveedor = async (req, res) => {
+  try {
+    const { nombre, rtn } = req.body;
+
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+
+    const proveedor = await Proveedor.create({ nombre, rtn });
+
+    res.status(201).json({
+      message: 'Proveedor creado exitosamente',
+      data: proveedor,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getProveedores,
-  getProveedorById
+  getProveedorById,
+  createProveedor
 };
