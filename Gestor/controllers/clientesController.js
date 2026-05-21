@@ -1,6 +1,7 @@
 'use strict';
 
 const { Cliente, TelefonoCliente, Solicitud } = require('../models');
+const { Op } = require('sequelize');
 
 // GET /api/clientes
 const getClientes = async (req, res) => {
@@ -100,12 +101,35 @@ const deleteCliente = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// GET /api/clientes/buscar?nombre=Hernandez
+const getClienteByNombre = async (req, res) => {
+  try {
+    const { nombre } = req.query;
 
+    if (!nombre) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+
+    const clientes = await Cliente.findAll({
+      where: {
+        nombre: {
+          [Op.iLike]: `%${nombre}%`,
+        },
+      },
+      include: [{ model: TelefonoCliente, as: 'telefonos' }],
+    });
+
+    res.json(clientes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 
 module.exports = {
   getClientes,
   getClienteById,
+  getClienteByNombre,
   createCliente,
   updateCliente,
   deleteCliente,
