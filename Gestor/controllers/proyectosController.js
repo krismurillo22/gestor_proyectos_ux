@@ -76,8 +76,45 @@ const updateProyectoEstado = async (req,res) => {
     }
 };
 
+// POST /api/proyectos
+const createProyecto = async(req,res) => {
+    try{
+        const {
+            id_cotizacion,
+            descripcion,
+            fecha_inicio,
+            fecha_vencimiento,
+            fecha_fin_real,
+            estado
+        } = req.body;
+
+        if(!id_cotizacion || !fecha_inicio || !fecha_vencimiento){
+            return res.status(400).json({ error: "Complete los campos obligatorios"});
+        }
+
+        const estadosValidos = ['en_progreso','completado','cancelado','vencido'];
+        if (estado && !estadosValidos.includes(estado)){
+            return res.status(400).json({ error: "Estado invalido."});
+        }
+
+        const proyecto = await Proyecto.create({
+            id_cotizacion,
+            descripcion,
+            fecha_inicio,
+            fecha_vencimiento,
+            fecha_fin_real,
+            estado: estado || undefined
+        });
+
+        res.status(201).json(proyecto);
+    }catch (error){
+        res.status(500).json({error: error.message});
+    }
+};
+
 module.exports = {
     getProyectos,
     getProyectoById,
-    updateProyectoEstado
+    updateProyectoEstado,
+    createProyecto
 };
