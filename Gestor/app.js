@@ -7,6 +7,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var clientesRouter = require('./routes/clientes');
 //var solicitudesRouter = require('./routes/solicitudes');
+var proyectosRouter = require('./routes/proyectos');
 
 var app = express();
 
@@ -20,7 +21,8 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/api', clientesRouter);
 //app.use('/api', solicitudesRouter);
+app.use('/api', proyectosRouter);
 
-const { sequelize, Cliente, Solicitud, Cotizacion } = require('./models');
+const { sequelize, Cliente, Solicitud, Cotizacion, Proyecto } = require('./models');
 
 module.exports = app;
