@@ -76,8 +76,29 @@ const updateProyectoEstado = async (req,res) => {
     }
 };
 
+// DELETE /api/proyectos/:id
+const deleteProyecto = async(req,res) => {
+    try{
+        const {id} = req.params;
+
+        const proyecto = await Proyecto.findOne({
+            where: { id_proyecto: id}
+        });
+
+        if (!proyecto){
+            return res.status(404).json({ error: 'Proyecto no encontrado'});
+        }
+
+        await proyecto.destroy();
+        res.json({ mensaje: 'Proyecto eliminado exitosamente. '});
+    } catch (error){
+        res.status(500).json({error: error.message});
+    }
+};
+
 module.exports = {
     getProyectos,
     getProyectoById,
-    updateProyectoEstado
+    updateProyectoEstado,
+    deleteProyecto
 };
