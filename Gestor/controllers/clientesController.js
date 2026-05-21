@@ -59,6 +59,22 @@ const createCliente = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// PUT /api/clientes/:id
+const updateCliente = async (req, res) => {
+  try {
+    const cliente = await Cliente.findByPk(req.params.id);
+
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const { nombre, rtn } = req.body;
+    await cliente.update({ nombre, rtn });
+    res.json({ message: 'Cliente actualizado exitosamente', data: cliente });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 
 
@@ -66,6 +82,6 @@ module.exports = {
   getClientes,
   getClienteById,
   createCliente,
-  //updateCliente,
+  updateCliente,
   //deleteCliente,
 };
