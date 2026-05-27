@@ -17,10 +17,36 @@ const getSolicitudes = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// GET /api/solicitudes/:id
+const getSolicitudById = async (req, res) => {
+  try {
+    const solicitud = await Solicitud.findByPk(req.params.id, {
+      include: [
+        {
+          model: Cliente,
+          as: 'cliente',
+        },
+        {
+          model: Cotizacion,
+          as: 'cotizaciones',
+        },
+      ],
+    });
+
+    if (!solicitud) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    res.json(solicitud);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 module.exports = {
   getSolicitudes,
-  //getSolicitudById,
+  getSolicitudById,
   //getSolicitudesByCliente,
   //getSolicitudesByFecha,
   //getSolicitudesByRango,
