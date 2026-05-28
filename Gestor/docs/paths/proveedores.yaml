@@ -1,0 +1,71 @@
+/proveedores:
+  get:
+    summary: Listar todos los proveedores
+    tags: [Proveedores]
+    responses:
+      '200':
+        description: Lista de proveedores
+        content:
+          application/json:
+            example:
+              - id_proveedor: 1
+                nombre: Proveedor ABC
+                rtn: "0801-1990-00123"
+                telefonos:
+                  - telefono: "9999-9999"
+                    id_proveedor: 1
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  post:
+    summary: Crear un proveedor
+    tags: [Proveedores]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - nombre
+            properties:
+              nombre:
+                type: string
+                minLength: 1
+                maxLength: 255
+                example: Proveedor ABC
+              rtn:
+                type: string
+                nullable: true
+                minLength: 14
+                maxLength: 20
+                pattern: '^\d{4}-\d{4}-\d{5}$'
+                example: "0801-1990-00123"
+    responses:
+      '201':
+        description: Proveedor creado exitosamente
+        content:
+          application/json:
+            example:
+              message: Proveedor creado exitosamente
+              data:
+                id_proveedor: 1
+                nombre: Proveedor ABC
+                rtn: "0801-1990-00123"
+      '400':
+        description: El nombre es requerido
+        content:
+          application/json:
+            example:
+              error: El nombre es requerido
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
