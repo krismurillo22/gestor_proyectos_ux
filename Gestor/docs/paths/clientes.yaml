@@ -35,10 +35,15 @@
             properties:
               nombre:
                 type: string
+                minLength: 1
+                maxLength: 255
                 example: Constructora Hernández
               rtn:
                 type: string
                 nullable: true
+                minLength: 14
+                maxLength: 20
+                pattern: '^\d{4}-\d{4}-\d{5}$'
                 example: "0501-1990-00123"
     responses:
       '201':
@@ -109,6 +114,7 @@
         description: ID del cliente
         schema:
           type: integer
+          minimum: 1
           example: 1
     responses:
       '200':
@@ -148,6 +154,7 @@
         description: ID del cliente a actualizar
         schema:
           type: integer
+          minimum: 1
           example: 1
     requestBody:
       required: true
@@ -155,12 +162,20 @@
         application/json:
           schema:
             type: object
+            required:
+              - nombre
             properties:
               nombre:
                 type: string
+                minLength: 1
+                maxLength: 255
                 example: Constructora Hernández Actualizada
               rtn:
                 type: string
+                nullable: true
+                minLength: 14
+                maxLength: 20
+                pattern: '^\d{4}-\d{4}-\d{5}$'
                 example: "0501-1990-00123"
     responses:
       '200':
@@ -196,6 +211,7 @@
         description: ID del cliente a eliminar
         schema:
           type: integer
+          minimum: 1
           example: 1
     responses:
       '200':
