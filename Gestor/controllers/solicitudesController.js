@@ -94,6 +94,47 @@ const createSolicitud = async (req, res) => {
   }
 };
 
+// PUT /api/solicitudes/:id
+const updateSolicitud = async (req, res) => {
+  try {
+    const solicitud = await Solicitud.findByPk(req.params.id);
+
+    if (!solicitud) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    const { id_cliente, descripcion, fecha } = req.body;
+
+    // Validar que el cliente existe si se está cambiando
+    if (id_cliente) {
+      const cliente = await Cliente.findByPk(id_cliente);
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente no encontrado' });
+      }
+    }
+
+    await solicitud.update({ id_cliente, descripcion, fecha });
+    res.json({ message: 'Solicitud actualizada exitosamente', data: solicitud });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// DELETE /api/solicitudes/:id
+const deleteSolicitud = async (req, res) => {
+  try {
+    const solicitud = await Solicitud.findByPk(req.params.id);
+
+    if (!solicitud) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    await solicitud.destroy();
+    res.json({ message: 'Solicitud eliminada correctamente' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   getSolicitudes,
@@ -102,6 +143,6 @@ module.exports = {
   //getSolicitudesByFecha,
   //getSolicitudesByRango,
   createSolicitud,
-  //updateSolicitud,
- // deleteSolicitud,
+  updateSolicitud,
+  deleteSolicitud,
 };
