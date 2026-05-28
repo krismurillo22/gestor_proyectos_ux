@@ -150,6 +150,58 @@ const estadisticasProyectos = async(req,res) =>{
     }catch(error){
         res.status(500).json({error: error.message});
     }
+// GET /proyectos/:id/cotizaciones
+const {Cotizacion} = require('../models');
+const getCotizacionesProyecto = async(req,res) => {
+    try{
+        const{id} = req.params;
+
+        const proyecto = await Proyecto.findOne({where: {id_proyecto: id}});
+        if (!proyecto) return res.status(404).json({error: 'Proyecto no encontrado'});
+
+        const cotizacion = await Cotizacion.findONe({where: {id: proyecto.id_cotizacion}});
+
+        res.json(cotizacion ? [cotizacion]: []);
+    }catch(error){
+        res.status(500).json({error: error.message});
+    }
+};  
+// GET /proyectos/:id/evaluaciones
+const {Evaluacion} = require('../models');
+const getEvaluacionesProyecto = async(req, res) => {
+    try{
+        const{id} = req.params;
+        const evaluaciones = await evaluacion.findAll({where: {id_proyecto: id}});
+        res.json(evaluaciones);
+    } catch (error){
+        res.status(500).json({error: error.message});
+    }
+};
+
+// PUT /api/proyectos/:id
+const updateProyecto = async(req,res) => {
+  try {
+    const {id} = req.params;
+    const {id_cotizacion, descripcion, fecha_inicio, fecha_vencimiento, fecha_fin_real, estado} = req.body;
+
+    const proyecto = await Proyecto.findOne({where: {id_proyecto: id}});
+    if(!proyecto){
+      return res.status(404).json({error: 'Proyecto no encontrado'});
+    }
+
+    await proyecto.update({
+      id_cotizacion: id_cotizacion ?? proyecto.id_cotizacion,
+      descripcion: descripcion ?? proyecto.descripcion,
+      fecha_inicio: fecha_inicio ?? proyecto.fecha_inicio,
+      fecha_vencimiento: fecha_vencimiento ?? proyecto.fecha_vencimiento,
+      fecha_fin_real: fecha_fin_real ?? proyecto.fecha_fin_real,
+      estado: estado ?? proyecto.estado,
+    });
+
+    res.json({mensaje: 'Proyecto actualizado exitosamente', proyecto})
+  } catch (error){
+    res.status(500).json({error: error.message});
+  }
 };
 
 module.exports = {
@@ -158,5 +210,8 @@ module.exports = {
     updateProyectoEstado,
     deleteProyecto,
     createProyecto,
-    estadisticasProyectos
+    estadisticasProyectos,
+    getCotizacionesProyecto,
+    getEvaluacionesProyecto,
+    updateProyecto
 };
