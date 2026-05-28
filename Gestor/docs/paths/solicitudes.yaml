@@ -1,0 +1,245 @@
+/solicitudes:
+  get:
+    summary: Listar todas las solicitudes
+    tags: [Solicitudes]
+    responses:
+      '200':
+        description: Lista de solicitudes
+        content:
+          application/json:
+            example:
+              - id_solicitud: 1
+                id_cliente: 1
+                descripcion: Remodelación de oficinas
+                fecha: "2026-01-10"
+                cliente:
+                  id_cliente: 1
+                  nombre: Constructora Hernández
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  post:
+    summary: Crear una solicitud
+    tags: [Solicitudes]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - id_cliente
+            properties:
+              id_cliente:
+                type: integer
+                minimum: 1
+                example: 1
+              descripcion:
+                type: string
+                nullable: true
+                maxLength: 500
+                example: Remodelación de oficinas
+              fecha:
+                type: string
+                format: date
+                example: "2026-01-10"
+    responses:
+      '201':
+        description: Solicitud creada exitosamente
+        content:
+          application/json:
+            example:
+              message: Solicitud creada exitosamente
+              data:
+                id_solicitud: 8
+                id_cliente: 1
+                descripcion: Remodelación de oficinas
+                fecha: "2026-01-10"
+      '400':
+        description: El id_cliente es requerido
+        content:
+          application/json:
+            example:
+              error: El id_cliente es requerido
+      '404':
+        description: Cliente no encontrado
+        content:
+          application/json:
+            example:
+              error: Cliente no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/solicitudes/cliente/{id_cliente}:
+  get:
+    summary: Obtener solicitudes de un cliente específico
+    tags: [Solicitudes]
+    parameters:
+      - name: id_cliente
+        in: path
+        required: true
+        description: ID del cliente
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Solicitudes del cliente
+        content:
+          application/json:
+            example:
+              - id_solicitud: 1
+                id_cliente: 1
+                descripcion: Remodelación de oficinas
+                fecha: "2026-01-10"
+                cotizaciones: []
+      '404':
+        description: Cliente no encontrado
+        content:
+          application/json:
+            example:
+              error: Cliente no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/solicitudes/{id}:
+  get:
+    summary: Obtener una solicitud por ID
+    tags: [Solicitudes]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la solicitud
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Solicitud encontrada
+        content:
+          application/json:
+            example:
+              id_solicitud: 1
+              id_cliente: 1
+              descripcion: Remodelación de oficinas
+              fecha: "2026-01-10"
+              cliente:
+                id_cliente: 1
+                nombre: Constructora Hernández
+              cotizaciones: []
+      '404':
+        description: Solicitud no encontrada
+        content:
+          application/json:
+            example:
+              error: Solicitud no encontrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  put:
+    summary: Actualizar una solicitud
+    tags: [Solicitudes]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la solicitud a actualizar
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id_cliente:
+                type: integer
+                minimum: 1
+                example: 1
+              descripcion:
+                type: string
+                nullable: true
+                maxLength: 500
+                example: Remodelación de oficinas actualizada
+              fecha:
+                type: string
+                format: date
+                example: "2026-01-15"
+    responses:
+      '200':
+        description: Solicitud actualizada exitosamente
+        content:
+          application/json:
+            example:
+              message: Solicitud actualizada exitosamente
+              data:
+                id_solicitud: 1
+                id_cliente: 1
+                descripcion: Remodelación de oficinas actualizada
+                fecha: "2026-01-15"
+      '404':
+        description: Solicitud no encontrada
+        content:
+          application/json:
+            example:
+              error: Solicitud no encontrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  delete:
+    summary: Eliminar una solicitud
+    tags: [Solicitudes]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la solicitud a eliminar
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Solicitud eliminada correctamente
+        content:
+          application/json:
+            example:
+              message: Solicitud eliminada correctamente
+      '404':
+        description: Solicitud no encontrada
+        content:
+          application/json:
+            example:
+              error: Solicitud no encontrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
