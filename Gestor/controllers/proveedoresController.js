@@ -1,6 +1,6 @@
 'use strict';
 
-const { Proveedor, TelefonoProveedor, Cotizacion } = require('../models');
+const { Proveedor, TelefonoProveedor, Cotizacion, Proyecto, Evaluacion } = require('../models');
 
 // GET /api/proveedores
 const getProveedores = async (req, res) => {
@@ -134,11 +134,49 @@ const getCotizacionesByProveedor = async (req, res) => {
   }
 };
 
+// GET /api/proveedores/:id/proyectos
+const getProyectosByProveedor = async (req, res) => {
+  try {
+    const proveedor = await Proveedor.findByPk(req.params.id);
+
+    if (!proveedor) {
+      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    }
+
+    const proyectos = await Proyecto.findAll({
+      include: [
+        {
+          model: Cotizacion,
+          as: 'cotizacion',
+          where: { id_proveedor: req.params.id },
+          include: [
+            {
+              model: Proveedor,
+              as: 'proveedor',
+            },
+          ],
+        },
+        {
+          model: Evaluacion,
+          as: 'evaluacion',
+          required: false,
+        },
+      ],
+      order: [['id_proyecto', 'DESC']],
+    });
+
+    res.json(proyectos);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getProveedores,
   getProveedorById,
   createProveedor,
   updateProveedor,
   deleteProveedor,
-  getCotizacionesByProveedor
+  getCotizacionesByProveedor,
+  getProyectosByProveedor,
 };
