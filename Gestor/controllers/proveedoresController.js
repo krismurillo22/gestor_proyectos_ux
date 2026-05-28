@@ -114,10 +114,31 @@ const deleteProveedor = async (req, res) => {
   }
 };
 
+// GET /api/proveedores/:id/cotizaciones
+const getCotizacionesByProveedor = async (req, res) => {
+  try {
+    const proveedor = await Proveedor.findByPk(req.params.id);
+
+    if (!proveedor) {
+      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    }
+
+    const cotizaciones = await Cotizacion.findAll({
+      where: { id_proveedor: req.params.id },
+      order: [['id_cotizacion', 'DESC']],
+    });
+
+    res.json(cotizaciones);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getProveedores,
   getProveedorById,
   createProveedor,
   updateProveedor,
-  deleteProveedor
+  deleteProveedor,
+  getCotizacionesByProveedor
 };
