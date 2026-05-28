@@ -133,10 +133,21 @@ const createProyecto = async(req,res) => {
     }
 };
 
+// GET /proyectos/activos
+const getProyectosActivos = async (req,res)=>{
+    try{
+        const proyectos = await Proyecto.findAll({where: {estado: 'en_progreso',},});
+        res.json(proyectos);
+    }catch(error){
+        res.status(500).json({error: error.message});
+    }
+};
+
 module.exports = {
     getProyectos,
     getProyectoById,
     updateProyectoEstado,
     deleteProyecto,
-    createProyecto
+    createProyecto,
+    getProyectosActivos
 };
