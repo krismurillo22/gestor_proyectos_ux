@@ -69,3 +69,172 @@
             example:
               error: Error del servidor
 
+/proveedores/validar-rtn/{rtn}:
+  get:
+    summary: Validar si existe un proveedor por RTN
+    tags: [Proveedores]
+    parameters:
+      - name: rtn
+        in: path
+        required: true
+        description: RTN del proveedor
+        schema:
+          type: string
+          example: "0801-1990-00123"
+    responses:
+      '200':
+        description: Resultado de validación
+        content:
+          application/json:
+            example:
+              existe: true
+              data:
+                id_proveedor: 1
+                nombre: Proveedor ABC
+                rtn: "0801-1990-00123"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/proveedores/{id}:
+  get:
+    summary: Obtener un proveedor por ID
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Proveedor encontrado
+        content:
+          application/json:
+            example:
+              id_proveedor: 1
+              nombre: Proveedor ABC
+              rtn: "0801-1990-00123"
+              telefonos:
+                - telefono: "9999-9999"
+                  id_proveedor: 1
+              cotizaciones:
+                - id_cotizacion: 1
+                  id_solicitud: 1
+                  id_proveedor: 1
+                  total: 15000
+                  estado: pendiente
+                  descripcion: Cotización para remodelación
+      '404':
+        description: Proveedor no encontrado
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  put:
+    summary: Actualizar un proveedor
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor a actualizar
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - nombre
+            properties:
+              nombre:
+                type: string
+                minLength: 1
+                maxLength: 255
+                example: Proveedor ABC Actualizado
+              rtn:
+                type: string
+                nullable: true
+                minLength: 14
+                maxLength: 20
+                pattern: '^\d{4}-\d{4}-\d{5}$'
+                example: "0801-1990-00123"
+    responses:
+      '200':
+        description: Proveedor actualizado exitosamente
+        content:
+          application/json:
+            example:
+              message: Proveedor actualizado exitosamente
+              data:
+                id_proveedor: 1
+                nombre: Proveedor ABC Actualizado
+                rtn: "0801-1990-00123"
+      '404':
+        description: Proveedor no encontrado
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  delete:
+    summary: Eliminar un proveedor
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor a eliminar
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Proveedor eliminado exitosamente
+        content:
+          application/json:
+            example:
+              message: Proveedor eliminado exitosamente
+      '400':
+        description: No se puede eliminar, tiene cotizaciones registradas
+        content:
+          application/json:
+            example:
+              error: No se puede eliminar el proveedor porque tiene cotizaciones registradas
+      '404':
+        description: Proveedor no encontrado
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
