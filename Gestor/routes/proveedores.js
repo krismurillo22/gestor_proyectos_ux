@@ -7,5 +7,11 @@ router.get('/proveedores/:id', proveedoresController.getProveedorById);
 router.post('/proveedores', proveedoresController.createProveedor);
 router.put('/proveedores/:id', proveedoresController.updateProveedor);
 router.delete('/proveedores/:id', proveedoresController.deleteProveedor);
+router.get('/proveedores/:id/cotizaciones', proveedoresController.getCotizacionesByProveedor);
+router.get('/proveedores/:id/proyectos', proveedoresController.getProyectosByProveedor);
+router.get('/proveedores/:id/estadisticas', proveedoresController.getEstadisticasProveedor);
+router.get('/proveedores/validar-rtn/:rtn', proveedoresController.validarRtnProveedor);
+router.post('/proveedores/:id/telefonos', proveedoresController.addTelefonoProveedor);
+router.delete('/proveedores/:id/telefonos/:telefono', proveedoresController.deleteTelefonoProveedor);
 
 module.exports = router;
