@@ -238,3 +238,196 @@
           application/json:
             example:
               error: Error del servidor
+
+
+/proveedores/{id}/cotizaciones:
+  get:
+    summary: Obtener cotizaciones de un proveedor
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Lista de cotizaciones del proveedor
+        content:
+          application/json:
+            example:
+              - id_cotizacion: 1
+                id_solicitud: 1
+                id_proveedor: 1
+                total: 15000
+                estado: aprobada
+                descripcion: Compra de materiales
+      '404':
+        description: Proveedor no encontrado
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+
+/proveedores/{id}/proyectos:
+  get:
+    summary: Obtener proyectos relacionados a un proveedor
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Lista de proyectos
+        content:
+          application/json:
+            example:
+              - id_proyecto: 1
+                descripcion: Construcción de oficinas
+                estado: en_progreso
+                fecha_inicio: "2026-05-01"
+                fecha_vencimiento: "2026-08-01"
+                cotizacion:
+                  id_cotizacion: 1
+                  total: 15000
+                evaluacion:
+                  rating: 5
+                  descripcion: Excelente trabajo
+      '404':
+        description: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+
+/proveedores/{id}/estadisticas:
+  get:
+    summary: Obtener estadísticas de un proveedor
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Estadísticas del proveedor
+        content:
+          application/json:
+            example:
+              proveedor:
+                id_proveedor: 1
+                nombre: Proveedor ABC
+                rtn: "0801-1990-00123"
+              estadisticas:
+                total_cotizaciones: 10
+                cotizaciones_pendientes: 2
+                cotizaciones_aprobadas: 6
+                cotizaciones_rechazadas: 2
+                total_facturado: 250000
+                total_proyectos: 5
+                proyectos_completados: 3
+                rating_promedio: 4.8
+      '404':
+        description: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+
+/proveedores/{id}/telefonos:
+  post:
+    summary: Agregar teléfono a proveedor
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - telefono
+            properties:
+              telefono:
+                type: string
+                example: "9999-9999"
+    responses:
+      '201':
+        description: Teléfono agregado exitosamente
+        content:
+          application/json:
+            example:
+              message: Teléfono agregado exitosamente
+              data:
+                telefono: "9999-9999"
+                id_proveedor: 1
+      '400':
+        description: Teléfono requerido o ya existente
+        content:
+          application/json:
+            example:
+              error: Este teléfono ya está registrado para este proveedor
+      '404':
+        description: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+
+/proveedores/{id}/telefonos/{telefono}:
+  delete:
+    summary: Eliminar teléfono de proveedor
+    tags: [Proveedores]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proveedor
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+
+      - name: telefono
+        in: path
+        required: true
+        description: Número telefónico
+        schema:
+          type: string
+          example: "9999-9999"
+
+    responses:
+      '200':
+        description: Teléfono eliminado exitosamente
+        content:
+          application/json:
+            example:
+              message: Teléfono eliminado exitosamente
+
+      '404':
+        description: Teléfono no encontrado
+        content:
+          application/json:
+            example:
+              error: Teléfono no encontrado para este proveedor
+
+      '500':
+        description: Error del servidor
