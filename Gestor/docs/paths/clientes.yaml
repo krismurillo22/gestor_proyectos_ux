@@ -1,0 +1,224 @@
+/clientes:
+  get:
+    summary: Listar todos los clientes
+    tags: [Clientes]
+    responses:
+      '200':
+        description: Lista de clientes
+        content:
+          application/json:
+            example:
+              - id_cliente: 1
+                nombre: Constructora Hernández
+                rtn: "0501-1990-00123"
+                telefonos:
+                  - telefono: "9901-2345"
+                    id_cliente: 1
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  post:
+    summary: Crear un cliente
+    tags: [Clientes]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - nombre
+            properties:
+              nombre:
+                type: string
+                example: Constructora Hernández
+              rtn:
+                type: string
+                nullable: true
+                example: "0501-1990-00123"
+    responses:
+      '201':
+        description: Cliente creado exitosamente
+        content:
+          application/json:
+            example:
+              message: Cliente creado exitosamente
+              data:
+                id_cliente: 7
+                nombre: Constructora Hernández
+                rtn: "0501-1990-00123"
+      '400':
+        description: El nombre es requerido
+        content:
+          application/json:
+            example:
+              error: El nombre es requerido
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/clientes/buscar:
+  get:
+    summary: Buscar clientes por nombre
+    tags: [Clientes]
+    parameters:
+      - name: nombre
+        in: query
+        required: true
+        description: Nombre o parte del nombre del cliente
+        schema:
+          type: string
+          example: Hernandez
+    responses:
+      '200':
+        description: Clientes encontrados
+        content:
+          application/json:
+            example:
+              - id_cliente: 1
+                nombre: Constructora Hernández
+                rtn: "0501-1990-00123"
+      '400':
+        description: El nombre es requerido
+        content:
+          application/json:
+            example:
+              error: El nombre es requerido
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/clientes/{id}:
+  get:
+    summary: Obtener un cliente por ID
+    tags: [Clientes]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del cliente
+        schema:
+          type: integer
+          example: 1
+    responses:
+      '200':
+        description: Cliente encontrado
+        content:
+          application/json:
+            example:
+              id_cliente: 1
+              nombre: Constructora Hernández
+              rtn: "0501-1990-00123"
+              telefonos:
+                - telefono: "9901-2345"
+                  id_cliente: 1
+              solicitudes:
+                - id_solicitud: 1
+                  descripcion: Remodelación de oficinas
+      '404':
+        description: Cliente no encontrado
+        content:
+          application/json:
+            example:
+              error: Cliente no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  put:
+    summary: Actualizar un cliente
+    tags: [Clientes]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del cliente a actualizar
+        schema:
+          type: integer
+          example: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              nombre:
+                type: string
+                example: Constructora Hernández Actualizada
+              rtn:
+                type: string
+                example: "0501-1990-00123"
+    responses:
+      '200':
+        description: Cliente actualizado exitosamente
+        content:
+          application/json:
+            example:
+              message: Cliente actualizado exitosamente
+              data:
+                id_cliente: 1
+                nombre: Constructora Hernández Actualizada
+                rtn: "0501-1990-00123"
+      '404':
+        description: Cliente no encontrado
+        content:
+          application/json:
+            example:
+              error: Cliente no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  delete:
+    summary: Eliminar un cliente
+    tags: [Clientes]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del cliente a eliminar
+        schema:
+          type: integer
+          example: 1
+    responses:
+      '200':
+        description: Cliente eliminado exitosamente
+        content:
+          application/json:
+            example:
+              message: Cliente eliminado exitosamente
+      '400':
+        description: No se puede eliminar, tiene solicitudes registradas
+        content:
+          application/json:
+            example:
+              error: No se puede eliminar el cliente porque tiene solicitudes registradas
+      '404':
+        description: Cliente no encontrado
+        content:
+          application/json:
+            example:
+              error: Cliente no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
