@@ -133,6 +133,16 @@ const createProyecto = async(req,res) => {
     }
 };
 
+// GET /proyectos/activos
+const getProyectosActivos = async (req,res)=>{
+    try{
+        const proyectos = await Proyecto.findAll({where: {estado: 'en_progreso',},});
+        res.json(proyectos);
+    }catch(error){
+        res.status(500).json({error: error.message});
+    }
+};
+
 // GET /api/proyectos/estadisticas
 const estadisticasProyectos = async(req,res) =>{
     try{
@@ -150,6 +160,8 @@ const estadisticasProyectos = async(req,res) =>{
     }catch(error){
         res.status(500).json({error: error.message});
     }
+};
+
 // GET /proyectos/:id/cotizaciones
 const {Cotizacion} = require('../models');
 const getCotizacionesProyecto = async(req,res) => {
@@ -166,6 +178,7 @@ const getCotizacionesProyecto = async(req,res) => {
         res.status(500).json({error: error.message});
     }
 };  
+
 // GET /proyectos/:id/evaluaciones
 const {Evaluacion} = require('../models');
 const getEvaluacionesProyecto = async(req, res) => {
@@ -210,6 +223,7 @@ module.exports = {
     updateProyectoEstado,
     deleteProyecto,
     createProyecto,
+    getProyectosActivos,
     estadisticasProyectos,
     getCotizacionesProyecto,
     getEvaluacionesProyecto,
