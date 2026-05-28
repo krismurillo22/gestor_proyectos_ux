@@ -181,6 +181,53 @@ const existeEvaluacionProyecto = async (req, res) => {
   }
 };
 
+// GET /api/evaluaciones/proveedor/:id_proveedor/promedio
+const getPromedioProveedor = async (req, res) => {
+  try {
+    const { id_proveedor } = req.params;
+
+    const proveedor = await Proveedor.findByPk(id_proveedor);
+
+    if (!proveedor) {
+      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    }
+
+    const evaluaciones = await Evaluacion.findAll({
+      include: [
+        {
+          model: Proyecto,
+          as: 'proyecto',
+          required: true,
+          include: [
+            {
+              model: Cotizacion,
+              as: 'cotizacion',
+              required: true,
+              where: { id_proveedor },
+            },
+          ],
+        },
+      ],
+    });
+
+    const totalEvaluaciones = evaluaciones.length;
+
+    const promedio =
+      totalEvaluaciones > 0
+        ? evaluaciones.reduce((acc, item) => acc + item.rating, 0) / totalEvaluaciones
+        : 0;
+
+    res.json({
+      id_proveedor: Number(id_proveedor),
+      proveedor: proveedor.nombre,
+      rating_promedio: Number(promedio.toFixed(2)),
+      total_evaluaciones: totalEvaluaciones,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getEvaluaciones,
   getEvaluacionById,
@@ -189,4 +236,5 @@ module.exports = {
   deleteEvaluacion,
   getEvaluacionByProyecto,
   existeEvaluacionProyecto,
+  getPromedioProveedor,
 };
