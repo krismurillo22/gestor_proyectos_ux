@@ -133,10 +133,28 @@ const createProyecto = async(req,res) => {
     }
 };
 
+// GET /proyectos/:id/cotizaciones
+const {Cotizacion} = require('../models');
+const getCotizacionesProyecto = async(req,res) => {
+    try{
+        const{id} = req.params;
+
+        const proyecto = await Proyecto.findOne({where: {id_proyecto: id}});
+        if (!proyecto) return res.status(404).json({error: 'Proyecto no encontrado'});
+
+        const cotizacion = await Cotizacion.findONe({where: {id: proyecto.id_cotizacion}});
+
+        res.json(cotizacion ? [cotizacion]: []);
+    }catch(error){
+        res.status(500).json({error: error.message});
+    }
+};  
+
 module.exports = {
     getProyectos,
     getProyectoById,
     updateProyectoEstado,
     deleteProyecto,
-    createProyecto
+    createProyecto,
+    getCotizacionesProyecto
 };
