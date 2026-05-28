@@ -228,6 +228,66 @@ const getPromedioProveedor = async (req, res) => {
   }
 };
 
+// GET /api/evaluaciones/ranking/proveedores
+const getRankingProveedores = async (req, res) => {
+  try {
+    const proveedores = await Proveedor.findAll({
+      include: [
+        {
+          model: Cotizacion,
+          as: 'cotizaciones',
+          required: false,
+          include: [
+            {
+              model: Proyecto,
+              as: 'proyecto',
+              required: false,
+              include: [
+                {
+                  model: Evaluacion,
+                  as: 'evaluacion',
+                  required: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const ranking = proveedores.map((proveedor) => {
+      const evaluaciones = [];
+
+      proveedor.cotizaciones.forEach((cotizacion) => {
+        if (cotizacion.proyecto && cotizacion.proyecto.evaluacion) {
+          evaluaciones.push(cotizacion.proyecto.evaluacion.rating);
+        }
+      });
+
+      const totalEvaluaciones = evaluaciones.length;
+
+      const promedio =
+        totalEvaluaciones > 0
+          ? evaluaciones.reduce((acc, rating) => acc + rating, 0) / totalEvaluaciones
+          : 0;
+
+      return {
+        id_proveedor: proveedor.id_proveedor,
+        proveedor: proveedor.nombre,
+        rtn: proveedor.rtn,
+        rating_promedio: Number(promedio.toFixed(2)),
+        total_evaluaciones: totalEvaluaciones,
+      };
+    });
+
+    ranking.sort((a, b) => b.rating_promedio - a.rating_promedio);
+
+    res.json(ranking);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getEvaluaciones,
   getEvaluacionById,
@@ -237,4 +297,5 @@ module.exports = {
   getEvaluacionByProyecto,
   existeEvaluacionProyecto,
   getPromedioProveedor,
+  getRankingProveedores,
 };
