@@ -264,6 +264,24 @@ const getEstadisticasProveedor = async (req, res) => {
   }
 };
 
+// GET /api/proveedores/validar-rtn/:rtn
+const validarRtnProveedor = async (req, res) => {
+  try {
+    const { rtn } = req.params;
+
+    const proveedor = await Proveedor.findOne({
+      where: { rtn },
+    });
+
+    res.json({
+      existe: !!proveedor,
+      data: proveedor,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getProveedores,
   getProveedorById,
@@ -273,4 +291,5 @@ module.exports = {
   getCotizacionesByProveedor,
   getProyectosByProveedor,
   getEstadisticasProveedor,
+  validarRtnProveedor,
 };
