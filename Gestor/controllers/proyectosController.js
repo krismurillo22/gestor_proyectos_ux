@@ -151,5 +151,6 @@ module.exports = {
     getProyectoById,
     updateProyectoEstado,
     deleteProyecto,
-    createProyecto
+    createProyecto,
+    getEvaluacionesProyecto
 };
