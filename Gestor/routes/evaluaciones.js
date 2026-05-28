@@ -8,5 +8,6 @@ router.post('/evaluaciones', evaluacionesController.createEvaluacion);
 router.put('/evaluaciones/:id', evaluacionesController.updateEvaluacion);
 router.delete('/evaluaciones/:id', evaluacionesController.deleteEvaluacion);
 router.get('/evaluaciones/proyecto/:id_proyecto', evaluacionesController.getEvaluacionByProyecto);
+router.get('/evaluaciones/proyecto/:id_proyecto/existe', evaluacionesController.existeEvaluacionProyecto);
 
 module.exports = router;
