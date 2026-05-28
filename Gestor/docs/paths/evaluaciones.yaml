@@ -1,0 +1,363 @@
+/evaluaciones:
+  get:
+    summary: Listar todas las evaluaciones
+    tags: [Evaluaciones]
+    responses:
+      '200':
+        description: Lista de evaluaciones
+        content:
+          application/json:
+            example:
+              - id_proyecto: 1
+                rating: 5
+                descripcion: Excelente trabajo
+                proyecto:
+                  id_proyecto: 1
+                  id_cotizacion: 1
+                  descripcion: Construcción de oficinas
+                  fecha_inicio: "2026-05-01T00:00:00.000Z"
+                  fecha_vencimiento: "2026-08-01T00:00:00.000Z"
+                  fecha_fin_real: null
+                  estado: completado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  post:
+    summary: Crear una evaluación
+    tags: [Evaluaciones]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - id_proyecto
+              - rating
+            properties:
+              id_proyecto:
+                type: integer
+                minimum: 1
+                example: 1
+              rating:
+                type: integer
+                minimum: 1
+                maximum: 5
+                example: 5
+              descripcion:
+                type: string
+                nullable: true
+                maxLength: 255
+                example: Excelente trabajo
+    responses:
+      '201':
+        description: Evaluación creada exitosamente
+        content:
+          application/json:
+            example:
+              message: Evaluación creada exitosamente
+              data:
+                id_proyecto: 1
+                rating: 5
+                descripcion: Excelente trabajo
+      '400':
+        description: Datos inválidos
+        content:
+          application/json:
+            examples:
+              idProyectoRequerido:
+                value:
+                  error: El id_proyecto es requerido
+              ratingRequerido:
+                value:
+                  error: El rating es requerido
+              ratingInvalido:
+                value:
+                  error: El rating debe estar entre 1 y 5
+              evaluacionExistente:
+                value:
+                  error: Este proyecto ya tiene una evaluación registrada
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            example:
+              error: Proyecto no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/evaluaciones/ranking/proveedores:
+  get:
+    summary: Obtener ranking de proveedores por evaluación
+    tags: [Evaluaciones]
+    responses:
+      '200':
+        description: Ranking de proveedores
+        content:
+          application/json:
+            example:
+              - id_proveedor: 1
+                proveedor: Proveedor ABC
+                rtn: "0801-1990-00123"
+                rating_promedio: 4.8
+                total_evaluaciones: 5
+              - id_proveedor: 2
+                proveedor: Proveedor XYZ
+                rtn: "0801-1991-00999"
+                rating_promedio: 4.3
+                total_evaluaciones: 3
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/evaluaciones/proyecto/{id_proyecto}:
+  get:
+    summary: Obtener evaluación por ID de proyecto
+    tags: [Evaluaciones]
+    parameters:
+      - name: id_proyecto
+        in: path
+        required: true
+        description: ID del proyecto
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Evaluación encontrada
+        content:
+          application/json:
+            example:
+              id_proyecto: 1
+              rating: 5
+              descripcion: Excelente trabajo
+              proyecto:
+                id_proyecto: 1
+                id_cotizacion: 1
+                descripcion: Construcción de oficinas
+                fecha_inicio: "2026-05-01T00:00:00.000Z"
+                fecha_vencimiento: "2026-08-01T00:00:00.000Z"
+                fecha_fin_real: null
+                estado: completado
+      '404':
+        description: El proyecto no tiene evaluación registrada
+        content:
+          application/json:
+            example:
+              error: Este proyecto no tiene evaluación registrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/evaluaciones/proyecto/{id_proyecto}/existe:
+  get:
+    summary: Validar si un proyecto tiene evaluación
+    tags: [Evaluaciones]
+    parameters:
+      - name: id_proyecto
+        in: path
+        required: true
+        description: ID del proyecto
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Resultado de validación
+        content:
+          application/json:
+            example:
+              existe: true
+              id_proyecto: 1
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/evaluaciones/proveedor/{id_proveedor}/promedio:
+  get:
+    summary: Obtener promedio de evaluación de un proveedor
+    tags: [Evaluaciones]
+    parameters:
+      - name: id_proveedor
+        in: path
+        required: true
+        description: ID del proveedor
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Promedio de evaluación del proveedor
+        content:
+          application/json:
+            example:
+              id_proveedor: 1
+              proveedor: Proveedor ABC
+              rating_promedio: 4.75
+              total_evaluaciones: 4
+      '404':
+        description: Proveedor no encontrado
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/evaluaciones/{id}:
+  get:
+    summary: Obtener una evaluación por ID
+    tags: [Evaluaciones]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la evaluación. En este modelo corresponde al id_proyecto.
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Evaluación encontrada
+        content:
+          application/json:
+            example:
+              id_proyecto: 1
+              rating: 5
+              descripcion: Excelente trabajo
+              proyecto:
+                id_proyecto: 1
+                id_cotizacion: 1
+                descripcion: Construcción de oficinas
+                fecha_inicio: "2026-05-01T00:00:00.000Z"
+                fecha_vencimiento: "2026-08-01T00:00:00.000Z"
+                fecha_fin_real: null
+                estado: completado
+      '404':
+        description: Evaluación no encontrada
+        content:
+          application/json:
+            example:
+              error: Evaluación no encontrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  put:
+    summary: Actualizar una evaluación
+    tags: [Evaluaciones]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la evaluación. En este modelo corresponde al id_proyecto.
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              rating:
+                type: integer
+                minimum: 1
+                maximum: 5
+                example: 4
+              descripcion:
+                type: string
+                nullable: true
+                maxLength: 255
+                example: Buen trabajo, pero con retrasos menores
+    responses:
+      '200':
+        description: Evaluación actualizada exitosamente
+        content:
+          application/json:
+            example:
+              message: Evaluación actualizada exitosamente
+              data:
+                id_proyecto: 1
+                rating: 4
+                descripcion: Buen trabajo, pero con retrasos menores
+      '400':
+        description: Rating inválido
+        content:
+          application/json:
+            example:
+              error: El rating debe estar entre 1 y 5
+      '404':
+        description: Evaluación no encontrada
+        content:
+          application/json:
+            example:
+              error: Evaluación no encontrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  delete:
+    summary: Eliminar una evaluación
+    tags: [Evaluaciones]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la evaluación. En este modelo corresponde al id_proyecto.
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Evaluación eliminada exitosamente
+        content:
+          application/json:
+            example:
+              message: Evaluación eliminada exitosamente
+      '404':
+        description: Evaluación no encontrada
+        content:
+          application/json:
+            example:
+              error: Evaluación no encontrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
