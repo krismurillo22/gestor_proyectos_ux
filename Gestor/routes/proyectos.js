@@ -7,6 +7,7 @@ router.get('/proyectos/:id', proyectosController.getProyectoById);
 router.put('/proyectos/:id/estado', proyectosController.updateProyectoEstado);
 router.delete('/proyectos/:id', proyectosController.deleteProyecto);
 router.post('/proyectos', proyectosController.createProyecto);
+router.get('/proyectos/filtrar', proyectosController.filtrarProyecto);
 router.get('/proyectos/activos', proyectosController.getProyectosActivos);
 router.get('/proyectos/estadisticas', proyectosController.estadisticasProyectos);
 router.get('/proyectos/:id/cotizaciones', proyectosController.getCotizacionesProyecto);

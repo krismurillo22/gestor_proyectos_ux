@@ -133,6 +133,31 @@ const createProyecto = async(req,res) => {
     }
 };
 
+// GET /proyectos/filtrar
+const{Op} = require('sequelize');
+
+const filtrarProyecto = async(req,res) =>{
+    try{
+        const {estado, descripcion, fecha_inicio,fecha_fin} = req.query
+        const where = {};
+
+        if(estado) where.estado = estado;
+        if (descripcion) where.descripcion = {[Op.iLike]: `%${descripcion}`};
+        if (fecha_inicio && fecha_fin){
+            where.fecha_inicio = {[Op.between]: [fecha_inicio,fecha_fin]};
+        } else if (fecha_inicio){
+            where.fecha_inicio = {[Op.gte]: fecha_inicio};
+        } else if (fecha_fin){
+            where.fecha_inicio = {[Op.lte]: fecha_fin};
+        }
+        const proyectos = await Proyecto.findAll({ where});
+        res.json(proyectos);
+    }catch(error){
+        res.status(500).json({error: error.message});
+    }
+};
+
+
 // GET /proyectos/activos
 const getProyectosActivos = async (req,res)=>{
     try{
@@ -223,6 +248,7 @@ module.exports = {
     updateProyectoEstado,
     deleteProyecto,
     createProyecto,
+    filtrarProyecto,
     getProyectosActivos,
     estadisticasProyectos,
     getCotizacionesProyecto,
