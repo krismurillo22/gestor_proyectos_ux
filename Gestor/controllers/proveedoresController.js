@@ -282,6 +282,50 @@ const validarRtnProveedor = async (req, res) => {
   }
 };
 
+// POST /api/proveedores/:id/telefonos
+const addTelefonoProveedor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { telefono } = req.body;
+
+    if (!telefono) {
+      return res.status(400).json({ error: 'El teléfono es requerido' });
+    }
+
+    const proveedor = await Proveedor.findByPk(id);
+
+    if (!proveedor) {
+      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    }
+
+    const telefonoExistente = await TelefonoProveedor.findOne({
+      where: {
+        id_proveedor: id,
+        telefono,
+      },
+    });
+
+    if (telefonoExistente) {
+      return res.status(400).json({
+        error: 'Este teléfono ya está registrado para este proveedor',
+      });
+    }
+
+    const nuevoTelefono = await TelefonoProveedor.create({
+      id_proveedor: id,
+      telefono,
+    });
+
+    res.status(201).json({
+      message: 'Teléfono agregado exitosamente',
+      data: nuevoTelefono,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
 module.exports = {
   getProveedores,
   getProveedorById,
@@ -292,4 +336,5 @@ module.exports = {
   getProyectosByProveedor,
   getEstadisticasProveedor,
   validarRtnProveedor,
+  addTelefonoProveedor,
 };

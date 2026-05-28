@@ -11,5 +11,6 @@ router.get('/proveedores/:id/cotizaciones', proveedoresController.getCotizacione
 router.get('/proveedores/:id/proyectos', proveedoresController.getProyectosByProveedor);
 router.get('/proveedores/:id/estadisticas', proveedoresController.getEstadisticasProveedor);
 router.get('/proveedores/validar-rtn/:rtn', proveedoresController.validarRtnProveedor);
+router.post('/proveedores/:id/telefonos', proveedoresController.addTelefonoProveedor);
 
 module.exports = router;
