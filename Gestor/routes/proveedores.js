@@ -8,5 +8,6 @@ router.post('/proveedores', proveedoresController.createProveedor);
 router.put('/proveedores/:id', proveedoresController.updateProveedor);
 router.delete('/proveedores/:id', proveedoresController.deleteProveedor);
 router.get('/proveedores/:id/cotizaciones', proveedoresController.getCotizacionesByProveedor);
+router.get('/proveedores/:id/proyectos', proveedoresController.getProyectosByProveedor);
 
 module.exports = router;
