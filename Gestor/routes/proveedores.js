@@ -9,5 +9,6 @@ router.put('/proveedores/:id', proveedoresController.updateProveedor);
 router.delete('/proveedores/:id', proveedoresController.deleteProveedor);
 router.get('/proveedores/:id/cotizaciones', proveedoresController.getCotizacionesByProveedor);
 router.get('/proveedores/:id/proyectos', proveedoresController.getProyectosByProveedor);
+router.get('/proveedores/:id/estadisticas', proveedoresController.getEstadisticasProveedor);
 
 module.exports = router;
