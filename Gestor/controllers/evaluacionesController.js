@@ -165,6 +165,22 @@ const getEvaluacionByProyecto = async (req, res) => {
   }
 };
 
+// GET /api/evaluaciones/proyecto/:id_proyecto/existe
+const existeEvaluacionProyecto = async (req, res) => {
+  try {
+    const { id_proyecto } = req.params;
+
+    const evaluacion = await Evaluacion.findByPk(id_proyecto);
+
+    res.json({
+      existe: !!evaluacion,
+      id_proyecto: Number(id_proyecto),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getEvaluaciones,
   getEvaluacionById,
@@ -172,4 +188,5 @@ module.exports = {
   updateEvaluacion,
   deleteEvaluacion,
   getEvaluacionByProyecto,
+  existeEvaluacionProyecto,
 };
