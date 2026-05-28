@@ -12,5 +12,6 @@ router.get('/proveedores/:id/proyectos', proveedoresController.getProyectosByPro
 router.get('/proveedores/:id/estadisticas', proveedoresController.getEstadisticasProveedor);
 router.get('/proveedores/validar-rtn/:rtn', proveedoresController.validarRtnProveedor);
 router.post('/proveedores/:id/telefonos', proveedoresController.addTelefonoProveedor);
+router.delete('/proveedores/:id/telefonos/:telefono', proveedoresController.deleteTelefonoProveedor);
 
 module.exports = router;

@@ -325,6 +325,31 @@ const addTelefonoProveedor = async (req, res) => {
   }
 };
 
+// DELETE /api/proveedores/:id/telefonos/:telefono
+const deleteTelefonoProveedor = async (req, res) => {
+  try {
+    const { id, telefono } = req.params;
+    const telefonoProveedor = await TelefonoProveedor.findOne({
+      where: {
+        id_proveedor: id,
+        telefono,
+      },
+    });
+
+    if (!telefonoProveedor) {
+      return res.status(404).json({
+        error: 'Teléfono no encontrado para este proveedor',
+      });
+    }
+    await telefonoProveedor.destroy();
+
+    res.json({
+      message: 'Teléfono eliminado exitosamente',
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   getProveedores,
@@ -337,4 +362,5 @@ module.exports = {
   getEstadisticasProveedor,
   validarRtnProveedor,
   addTelefonoProveedor,
+  deleteTelefonoProveedor,
 };
