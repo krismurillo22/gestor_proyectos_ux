@@ -188,7 +188,6 @@ const estadisticasProyectos = async(req,res) =>{
 };
 
 // GET /proyectos/:id/cotizaciones
-const {Cotizacion} = require('../models');
 const getCotizacionesProyecto = async(req,res) => {
     try{
         const{id} = req.params;
