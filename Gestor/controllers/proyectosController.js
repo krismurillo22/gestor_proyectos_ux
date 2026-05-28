@@ -1,6 +1,6 @@
 'use strict';
 
-const { Proyecto, Cotizacion } = require('../models');
+const { Proyecto, Cotizacion, sequelize } = require('../models');
 
 // GET /api/proyectos
 const getProyectos = async (req, res) => {
@@ -133,6 +133,23 @@ const createProyecto = async(req,res) => {
     }
 };
 
+// GET /api/proyectos/estadisticas
+const estadisticasProyectos = async(req,res) =>{
+    try{
+        const total = await Proyecto.count();
+        const porEstado = await Proyecto.findAll({
+            attributes: ['estado',[sequelize.fn('COUNT',sequelize.col('estado')),'cantidad']],
+            group: ['estado'],
+            raw: true,
+        });
+
+        res.json({
+            total,
+            porEstado,
+        });
+    }catch(error){
+        res.status(500).json({error: error.message});
+    }
 // GET /proyectos/:id/cotizaciones
 const {Cotizacion} = require('../models');
 const getCotizacionesProyecto = async(req,res) => {
@@ -193,6 +210,7 @@ module.exports = {
     updateProyectoEstado,
     deleteProyecto,
     createProyecto,
+    estadisticasProyectos,
     getCotizacionesProyecto,
     getEvaluacionesProyecto,
     updateProyecto
