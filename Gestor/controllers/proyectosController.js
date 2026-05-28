@@ -133,6 +133,19 @@ const createProyecto = async(req,res) => {
     }
 };
 
+// GET /proyectos/:id/evaluaciones
+const {Evaluacion} = require('../models');
+const getEvaluacionesProyecto = async(req, res) => {
+    try{
+        const{id} = req.params;
+        const evaluaciones = await evaluacion.findAll({where: {id_proyecto: id}});
+        res.json(evaluaciones);
+    } catch (error){
+        res.status(500).json({error: error.message});
+    }
+};
+
+
 module.exports = {
     getProyectos,
     getProyectoById,
