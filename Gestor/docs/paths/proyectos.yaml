@@ -1,0 +1,409 @@
+/proyectos:
+  get:
+    summary: Listar todos los proyectos
+    tags: [Proyectos]
+    responses:
+      '200':
+        description: Lista de proyectos
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Proyecto'
+
+  post:
+    summary: Crear un proyecto
+    tags: [Proyectos]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProyectoInput'
+    responses:
+      '201':
+        description: Proyecto creado exitosamente
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Proyecto'
+      '400':
+        description: Campos obligatorios faltantes o inválidos
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+
+/proyectos/filtrar:
+  get:
+    summary: Filtrar proyectos
+    tags: [Proyectos]
+    parameters:
+      - name: estado
+        in: query
+        schema:
+          type: string
+        required: false
+      - name: descripcion
+        in: query
+        schema:
+          type: string
+        required: false
+      - name: fecha_inicio
+        in: query
+        schema:
+          type: string
+          format: date
+        required: false
+      - name: fecha_fin
+        in: query
+        schema:
+          type: string
+          format: date
+        required: false
+    responses:
+      '200':
+        description: Lista filtrada de proyectos
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Proyecto'
+
+/proyectos/activos:
+  get:
+    summary: Listar proyectos activos
+    tags: [Proyectos]
+    responses:
+      '200':
+        description: Proyectos activos
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Proyecto'
+
+/proyectos/estadisticas:
+  get:
+    summary: Estadísticas generales de proyectos
+    tags: [Proyectos]
+    responses:
+      '200':
+        description: Estadisticas de proyectos
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                total:
+                  type: integer
+                porEstado:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      estado:
+                        type: string
+                      cantidad:
+                        type: integer
+
+/proyectos/{id}:
+  get:
+    summary: Obtener proyecto por ID
+    tags: [Proyectos]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      '200':
+        description: Proyecto encontrado
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Proyecto'
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+
+  put:
+    summary: Actualizar proyecto por ID
+    tags: [Proyectos]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProyectoInput'
+    responses:
+      '200':
+        description: Proyecto actualizado exitosamente
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Proyecto'
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+
+  delete:
+    summary: Eliminar proyecto por ID
+    tags: [Proyectos]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      '200':
+        description: Proyecto eliminado exitosamente
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mensaje:
+                  type: string
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+
+/proyectos/{id}/estado:
+  put:
+    summary: Actualizar solo el estado de un proyecto
+    tags: [Proyectos]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              estado:
+                type: string
+                example: en_progreso
+    responses:
+      '200':
+        description: Estado actualizado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mensaje:
+                  type: string
+                proyecto:
+                  $ref: '#/components/schemas/Proyecto'
+      '400':
+        description: Estado invalido
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+
+/proyectos/{id}/cotizaciones:
+  get:
+    summary: Obtener cotizaciones de un proyecto
+    tags: [Proyectos]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      '200':
+        description: Lista de cotizaciones
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Cotizacion'
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+
+/proyectos/{id}/evaluaciones:
+  get:
+    summary: Listar evaluaciones del proyecto
+    tags: [Proyectos]
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    responses:
+      '200':
+        description: Evaluaciones del proyecto
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Evaluacion'
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+
+components:
+  schemas:
+    Proyecto:
+      type: object
+      properties:
+        id_proyecto:
+          type: integer
+          example: 2
+        id_cotizacion:
+          type: integer
+          example: 6
+        descripcion:
+          type: string
+          example: Construccion sede nueva
+        fecha_inicio:
+          type: string
+          format: date
+          example: "2024-05-12"
+        fecha_vencimiento:
+          type: string
+          format: date
+          example: "2024-09-01"
+        fecha_fin_real:
+          type: string
+          format: date
+          nullable: true
+          example: null
+        estado:
+          type: string
+          example: en_progreso
+
+    ProyectoInput:
+      type: object
+      required:
+        - id_cotizacion
+        - fecha_inicio
+        - fecha_vencimiento
+      properties:
+        id_cotizacion:
+          type: integer
+          example: 6
+        descripcion:
+          type: string
+          example: Construccion sede nueva
+        fecha_inicio:
+          type: string
+          format: date
+          example: "2024-05-12"
+        fecha_vencimiento:
+          type: string
+          format: date
+          example: "2024-09-01"
+        fecha_fin_real:
+          type: string
+          format: date
+          example: null
+        estado:
+          type: string
+          example: en_progreso
+
+    Cotizacion:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 10
+        total:
+          type: number
+          example: 20050.00
+        estado:
+          type: string
+          example: aprobada
+
+    Evaluacion:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        id_proyecto:
+          type: integer
+          example: 2
+        rating:
+          type: integer
+          example: 4
+        descripcion:
+          type: string
+          example: "Buen avance y calidad"
