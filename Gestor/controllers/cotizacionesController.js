@@ -14,8 +14,8 @@ const { Cotizacion, DetalleCotizacion } = require('../models');
 
 // Estados posibles para cotizaciones
 const ESTADOS_COTIZACION = {
+  PENDIENTE: 'pendiente',
   APROBADA: 'aprobada',
-  EN_PROCESO: 'en proceso',
   RECHAZADA: 'rechazada'
 };
 
@@ -127,7 +127,7 @@ async function rechazarCotizacion(req, res) {
   }
 }
 
-module.exports = { crearCotizacion, obtenerCotizacionPorId, aprobarCotizacion, rechazarCotizacion };
+//module.exports = { crearCotizacion, obtenerCotizacionPorId, aprobarCotizacion, rechazarCotizacion };
 
 // PUT: Modificar una cotización por ID (incluye reemplazo de detalles)
 async function modificarCotizacion(req, res) {

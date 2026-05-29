@@ -11,6 +11,7 @@ var proveedoresRouter = require('./routes/proveedores');
 var evaluacionesRouter = require('./routes/evaluaciones');
 var solicitudesRouter = require('./routes/solicitudes');
 var proyectosRouter = require('./routes/proyectos');
+var cotizacionesRouter = require('./routes/cotizaciones');
 
 var app = express();
 
@@ -27,6 +28,7 @@ app.use('/api', proveedoresRouter);
 app.use('/api', evaluacionesRouter);
 app.use('/api', solicitudesRouter);
 app.use('/api', proyectosRouter);
+app.use('/api', cotizacionesRouter);
 
 swaggerSetup(app);
 

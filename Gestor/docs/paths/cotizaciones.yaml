@@ -1,0 +1,250 @@
+/cotizaciones:
+  post:
+    summary: Crear una cotización
+    tags: [Cotizaciones]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - id_solicitud
+              - id_proveedor
+              - total
+              - detalles
+            properties:
+              id_solicitud:
+                type: integer
+                example: 1
+              id_proveedor:
+                type: integer
+                example: 2
+              total:
+                type: number
+                example: 1500.50
+              estado:
+                type: string
+                example: pendiente
+              detalles:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    producto_id:
+                      type: integer
+                      example: 10
+                    cantidad:
+                      type: integer
+                      example: 5
+                    precio_unitario:
+                      type: number
+                      example: 250.10
+                    descripcion_item:
+                      type: string
+                      example: Cemento Portland
+    responses:
+      '201':
+        description: Cotización creada exitosamente
+        content:
+          application/json:
+            example:
+              ok: true
+              cotizacion:
+                id: 1
+                id_solicitud: 1
+                id_proveedor: 2
+                total: 1500.50
+                estado: pendiente
+      '400':
+        description: Datos inválidos
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Faltan datos requeridos o formato inválido.
+      '500':
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Error interno creando cotización.
+
+/cotizaciones/{id}:
+  get:
+    summary: Obtener una cotización por ID
+    tags: [Cotizaciones]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la cotización
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Cotización encontrada
+        content:
+          application/json:
+            example:
+              ok: true
+              cotizacion:
+                id: 1
+                id_solicitud: 1
+                id_proveedor: 2
+                total: 1500.50
+                estado: pendiente
+                detalles:
+                  - producto_id: 10
+                    cantidad: 5
+                    precio_unitario: 250.10
+                    descripcion: Cemento Portland
+      '404':
+        description: Cotización no encontrada
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Cotización no encontrada.
+      '500':
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Error interno obteniendo cotización.
+
+  put:
+    summary: Modificar una cotización
+    tags: [Cotizaciones]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la cotización
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id_solicitud:
+                type: integer
+              id_proveedor:
+                type: integer
+              total:
+                type: number
+              estado:
+                type: string
+              detalles:
+                type: array
+                items:
+                  type: object
+    responses:
+      '200':
+        description: Cotización modificada exitosamente
+        content:
+          application/json:
+            example:
+              ok: true
+              cotizacion:
+                id: 1
+                estado: pendiente
+      '404':
+        description: Cotización no encontrada
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Cotización no encontrada.
+      '500':
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Error interno modificando cotización.
+
+/cotizaciones/{id}/aprobar:
+  put:
+    summary: Aprobar una cotización
+    tags: [Cotizaciones]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la cotización
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Cotización aprobada correctamente
+        content:
+          application/json:
+            example:
+              ok: true
+              cotizacion:
+                id: 1
+                estado: aprobada
+      '404':
+        description: Cotización no encontrada
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Cotización no encontrada.
+      '500':
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Error interno aprobando cotización.
+
+/cotizaciones/{id}/rechazar:
+  put:
+    summary: Rechazar una cotización
+    tags: [Cotizaciones]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID de la cotización
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Cotización rechazada correctamente
+        content:
+          application/json:
+            example:
+              ok: true
+              cotizacion:
+                id: 1
+                estado: rechazada
+      '404':
+        description: Cotización no encontrada
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Cotización no encontrada.
+      '500':
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              ok: false
+              msg: Error interno rechazando cotización.
