@@ -12,9 +12,16 @@
                 id_cliente: 1
                 descripcion: Remodelación de oficinas
                 fecha: "2026-01-10"
+                activo: true
                 cliente:
                   id_cliente: 1
                   nombre: Constructora Hernández
+      '404':
+        description: No hay solicitudes registradas
+        content:
+          application/json:
+            example:
+              error: No hay solicitudes registradas
       '500':
         description: Error del servidor
         content:
@@ -59,12 +66,28 @@
                 id_cliente: 1
                 descripcion: Remodelación de oficinas
                 fecha: "2026-01-10"
+                activo: true
       '400':
-        description: El id_cliente es requerido
+        description: Datos inválidos
         content:
           application/json:
-            example:
-              error: El id_cliente es requerido
+            examples:
+              id_cliente_requerido:
+                summary: id_cliente requerido
+                value:
+                  error: El id_cliente es requerido
+              id_cliente_invalido:
+                summary: id_cliente inválido
+                value:
+                  error: El id_cliente debe ser un número entero positivo
+              descripcion_larga:
+                summary: Descripción muy larga
+                value:
+                  error: La descripción no puede tener más de 500 caracteres
+              fecha_invalida:
+                summary: Fecha con formato inválido
+                value:
+                  error: La fecha no tiene un formato válido
       '404':
         description: Cliente no encontrado
         content:
@@ -86,7 +109,6 @@
       - name: id_cliente
         in: path
         required: true
-        description: ID del cliente
         schema:
           type: integer
           minimum: 1
@@ -101,13 +123,27 @@
                 id_cliente: 1
                 descripcion: Remodelación de oficinas
                 fecha: "2026-01-10"
+                activo: true
                 cotizaciones: []
-      '404':
-        description: Cliente no encontrado
+      '400':
+        description: ID inválido
         content:
           application/json:
             example:
-              error: Cliente no encontrado
+              error: El ID del cliente debe ser un número entero positivo
+      '404':
+        description: No encontrado
+        content:
+          application/json:
+            examples:
+              cliente_no_encontrado:
+                summary: Cliente no encontrado
+                value:
+                  error: Cliente no encontrado
+              sin_solicitudes:
+                summary: Cliente sin solicitudes
+                value:
+                  error: Este cliente no tiene solicitudes registradas
       '500':
         description: Error del servidor
         content:
@@ -123,7 +159,6 @@
       - name: id
         in: path
         required: true
-        description: ID de la solicitud
         schema:
           type: integer
           minimum: 1
@@ -138,10 +173,17 @@
               id_cliente: 1
               descripcion: Remodelación de oficinas
               fecha: "2026-01-10"
+              activo: true
               cliente:
                 id_cliente: 1
                 nombre: Constructora Hernández
               cotizaciones: []
+      '400':
+        description: ID inválido
+        content:
+          application/json:
+            example:
+              error: El ID debe ser un número entero positivo
       '404':
         description: Solicitud no encontrada
         content:
@@ -155,14 +197,13 @@
             example:
               error: Error del servidor
 
-  put:
-    summary: Actualizar una solicitud
+  patch:
+    summary: Actualizar una solicitud parcialmente
     tags: [Solicitudes]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID de la solicitud a actualizar
         schema:
           type: integer
           minimum: 1
@@ -199,12 +240,41 @@
                 id_cliente: 1
                 descripcion: Remodelación de oficinas actualizada
                 fecha: "2026-01-15"
-      '404':
-        description: Solicitud no encontrada
+                activo: true
+      '400':
+        description: Datos inválidos
         content:
           application/json:
-            example:
-              error: Solicitud no encontrada
+            examples:
+              id_invalido:
+                summary: ID inválido
+                value:
+                  error: El ID debe ser un número entero positivo
+              id_cliente_invalido:
+                summary: id_cliente inválido
+                value:
+                  error: El id_cliente debe ser un número entero positivo
+              descripcion_larga:
+                summary: Descripción muy larga
+                value:
+                  error: La descripción no puede tener más de 500 caracteres
+              fecha_invalida:
+                summary: Fecha con formato inválido
+                value:
+                  error: La fecha no tiene un formato válido
+      '404':
+        description: No encontrado
+        content:
+          application/json:
+            examples:
+              solicitud_no_encontrada:
+                summary: Solicitud no encontrada
+                value:
+                  error: Solicitud no encontrada
+              cliente_no_encontrado:
+                summary: Cliente no encontrado
+                value:
+                  error: Cliente no encontrado
       '500':
         description: Error del servidor
         content:
@@ -212,31 +282,37 @@
             example:
               error: Error del servidor
 
-  delete:
-    summary: Eliminar una solicitud
+/solicitudes/{id}/desactivar:
+  patch:
+    summary: Desactivar una solicitud
     tags: [Solicitudes]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID de la solicitud a eliminar
         schema:
           type: integer
           minimum: 1
           example: 1
     responses:
       '200':
-        description: Solicitud eliminada correctamente
+        description: Solicitud desactivada exitosamente
         content:
           application/json:
             example:
-              message: Solicitud eliminada correctamente
+              message: Solicitud desactivada exitosamente
+      '400':
+        description: ID inválido
+        content:
+          application/json:
+            example:
+              error: El ID debe ser un número entero positivo
       '404':
-        description: Solicitud no encontrada
+        description: Solicitud no encontrada o ya desactivada
         content:
           application/json:
             example:
-              error: Solicitud no encontrada
+              error: Solicitud no encontrada o ya está desactivada
       '500':
         description: Error del servidor
         content:
