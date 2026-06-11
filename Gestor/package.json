@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www",
+    "start": "nodemon ./bin/www",
     "dev": "nodemon ./bin/www",
     "db:migrate": "sequelize-cli db:migrate",
     "db:m:undo": "sequelize-cli db:migrate:undo:all",
@@ -15,6 +15,7 @@
     "debug": "~2.6.9",
     "dotenv": "^17.4.2",
     "express": "~4.16.1",
+    "express-validator": "^7.3.2",
     "morgan": "~1.9.1",
     "pg": "^8.20.0",
     "pg-hstore": "^2.3.4",

@@ -11,9 +11,16 @@
               - id_cliente: 1
                 nombre: Constructora Hernández
                 rtn: "0501-1990-00123"
+                activo: true
                 telefonos:
                   - telefono: "9901-2345"
                     id_cliente: 1
+      '404':
+        description: No hay clientes registrados
+        content:
+          application/json:
+            example:
+              error: No hay clientes registrados
       '500':
         description: Error del servidor
         content:
@@ -41,8 +48,6 @@
               rtn:
                 type: string
                 nullable: true
-                minLength: 14
-                maxLength: 20
                 pattern: '^\d{4}-\d{4}-\d{5}$'
                 example: "0501-1990-00123"
     responses:
@@ -56,12 +61,37 @@
                 id_cliente: 7
                 nombre: Constructora Hernández
                 rtn: "0501-1990-00123"
+                activo: true
       '400':
-        description: El nombre es requerido
+        description: Datos inválidos
         content:
           application/json:
-            example:
-              error: El nombre es requerido
+            examples:
+              nombre_requerido:
+                summary: Nombre requerido
+                value:
+                  error: El nombre es requerido
+              nombre_largo:
+                summary: Nombre muy largo
+                value:
+                  error: El nombre no puede tener más de 255 caracteres
+              rtn_invalido:
+                summary: RTN con formato incorrecto
+                value:
+                  error: El RTN debe tener el formato 0000-0000-00000
+      '409':
+        description: Conflicto - dato duplicado
+        content:
+          application/json:
+            examples:
+              nombre_duplicado:
+                summary: Nombre duplicado
+                value:
+                  error: Ya existe un cliente con ese nombre
+              rtn_duplicado:
+                summary: RTN duplicado
+                value:
+                  error: Ya existe un cliente con ese RTN
       '500':
         description: Error del servidor
         content:
@@ -77,7 +107,6 @@
       - name: nombre
         in: query
         required: true
-        description: Nombre o parte del nombre del cliente
         schema:
           type: string
           example: Hernandez
@@ -90,12 +119,19 @@
               - id_cliente: 1
                 nombre: Constructora Hernández
                 rtn: "0501-1990-00123"
+                activo: true
       '400':
         description: El nombre es requerido
         content:
           application/json:
             example:
               error: El nombre es requerido
+      '404':
+        description: No se encontraron clientes
+        content:
+          application/json:
+            example:
+              error: No se encontraron clientes con el nombre "Hernandez"
       '500':
         description: Error del servidor
         content:
@@ -111,7 +147,6 @@
       - name: id
         in: path
         required: true
-        description: ID del cliente
         schema:
           type: integer
           minimum: 1
@@ -125,12 +160,19 @@
               id_cliente: 1
               nombre: Constructora Hernández
               rtn: "0501-1990-00123"
+              activo: true
               telefonos:
                 - telefono: "9901-2345"
                   id_cliente: 1
               solicitudes:
                 - id_solicitud: 1
                   descripcion: Remodelación de oficinas
+      '400':
+        description: ID inválido
+        content:
+          application/json:
+            example:
+              error: El ID debe ser un número entero positivo
       '404':
         description: Cliente no encontrado
         content:
@@ -144,14 +186,13 @@
             example:
               error: Error del servidor
 
-  put:
-    summary: Actualizar un cliente
+  patch:
+    summary: Actualizar un cliente parcialmente
     tags: [Clientes]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del cliente a actualizar
         schema:
           type: integer
           minimum: 1
@@ -173,8 +214,6 @@
               rtn:
                 type: string
                 nullable: true
-                minLength: 14
-                maxLength: 20
                 pattern: '^\d{4}-\d{4}-\d{5}$'
                 example: "0501-1990-00123"
     responses:
@@ -188,12 +227,43 @@
                 id_cliente: 1
                 nombre: Constructora Hernández Actualizada
                 rtn: "0501-1990-00123"
+                activo: true
+      '400':
+        description: Datos inválidos
+        content:
+          application/json:
+            examples:
+              id_invalido:
+                summary: ID inválido
+                value:
+                  error: El ID debe ser un número entero positivo
+              nombre_requerido:
+                summary: Nombre requerido
+                value:
+                  error: El nombre es requerido
+              rtn_invalido:
+                summary: RTN con formato incorrecto
+                value:
+                  error: El RTN debe tener el formato 0000-0000-00000
       '404':
         description: Cliente no encontrado
         content:
           application/json:
             example:
               error: Cliente no encontrado
+      '409':
+        description: Conflicto - dato duplicado
+        content:
+          application/json:
+            examples:
+              nombre_duplicado:
+                summary: Nombre duplicado
+                value:
+                  error: Ya existe otro cliente con ese nombre
+              rtn_duplicado:
+                summary: RTN duplicado
+                value:
+                  error: Ya existe otro cliente con ese RTN
       '500':
         description: Error del servidor
         content:
@@ -201,37 +271,43 @@
             example:
               error: Error del servidor
 
-  delete:
-    summary: Eliminar un cliente
+/clientes/{id}/desactivar:
+  patch:
+    summary: Desactivar un cliente
     tags: [Clientes]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del cliente a eliminar
         schema:
           type: integer
           minimum: 1
           example: 1
     responses:
       '200':
-        description: Cliente eliminado exitosamente
+        description: Cliente desactivado exitosamente
         content:
           application/json:
             example:
-              message: Cliente eliminado exitosamente
+              message: Cliente desactivado exitosamente
       '400':
-        description: No se puede eliminar, tiene solicitudes registradas
+        description: ID inválido
         content:
           application/json:
             example:
-              error: No se puede eliminar el cliente porque tiene solicitudes registradas
+              error: El ID debe ser un número entero positivo
       '404':
-        description: Cliente no encontrado
+        description: Cliente no encontrado o ya desactivado
         content:
           application/json:
             example:
-              error: Cliente no encontrado
+              error: Cliente no encontrado o ya está desactivado
+      '409':
+        description: Tiene solicitudes activas
+        content:
+          application/json:
+            example:
+              error: No se puede desactivar el cliente porque tiene solicitudes activas
       '500':
         description: Error del servidor
         content:
