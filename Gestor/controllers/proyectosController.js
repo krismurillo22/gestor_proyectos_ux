@@ -69,7 +69,7 @@ const getProyectoById = async (req,res) => {
     }
 };
 
-// PUT /api/proyectos/:id/estado
+// PATCH /api/proyectos/:id/estado
 const updateProyectoEstado = async (req,res) => {
     const {estado} = req.body;
     const {id} = req.params;
@@ -106,8 +106,9 @@ const updateProyectoEstado = async (req,res) => {
     }
 };
 
-// DELETE /api/proyectos/:id
-const deleteProyecto = async(req,res) => {
+// PATCH /api/proyectos/:id/desactivar  (reemplaza DELETE)
+// No borra el registro, solo marca como 'cancelado'
+const desactivarProyecto = async(req,res) => {
     try{
         const {id} = req.params;
         if (!isPositiveInteger(id)){
@@ -122,16 +123,17 @@ const deleteProyecto = async(req,res) => {
             return res.status(404).json({ error: `El proyecto con ID ${id} no existe`});
         }
 
-        // Validación: solo eliminar si está cancelado
-        if (proyecto.estado !== 'cancelado'){
-            return res.status(400).json({ error: 'No se puede eliminar un proyecto que no está cancelado' });
+        if (proyecto.estado === 'cancelado'){
+            return res.status(400).json({ error: 'El proyecto ya está cancelado' });
         }
 
-        await proyecto.destroy();
-        res.json({ message: 'Proyecto eliminado exitosamente' });
+        proyecto.estado = 'cancelado';
+        await proyecto.save();
+
+        res.json({ message: 'Proyecto desactivado (estado cancelado) exitosamente', proyecto });
     } catch (error){
-        console.error('Error en deleteProyecto:', error);
-        res.status(500).json({error: 'Error interno al eliminar proyecto' });
+        console.error('Error en desactivarProyecto:', error);
+        res.status(500).json({error: 'Error interno al desactivar proyecto' });
     }
 };
 
@@ -377,7 +379,7 @@ const getEvaluacionesProyecto = async(req, res) => {
     }
 };
 
-// PUT /api/proyectos/:id
+// PATCH /api/proyectos/:id  (actualización parcial)
 const updateProyecto = async(req,res) => {
     try {
         const {id} = req.params;
@@ -459,7 +461,7 @@ module.exports = {
     getProyectos,
     getProyectoById,
     updateProyectoEstado,
-    deleteProyecto,
+    desactivarProyecto,
     createProyecto,
     filtrarProyecto,
     getProyectosActivos,

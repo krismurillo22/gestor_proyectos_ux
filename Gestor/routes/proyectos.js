@@ -9,9 +9,10 @@ router.get('/proyectos', proyectosController.getProyectos);
 router.post('/proyectos', proyectosController.createProyecto);
 router.get('/proyectos/:id/cotizaciones', proyectosController.getCotizacionesProyecto);
 router.get('/proyectos/:id/evaluaciones', proyectosController.getEvaluacionesProyecto);
-router.put('/proyectos/:id/estado', proyectosController.updateProyectoEstado);
+router.patch('/proyectos/:id/estado', proyectosController.updateProyectoEstado); 
+router.patch('/proyectos/:id', proyectosController.updateProyecto); 
+router.patch('/proyectos/:id/desactivar', proyectosController.desactivarProyecto); 
+router.delete('/proyectos/:id', proyectosController.desactivarProyecto);
 router.get('/proyectos/:id', proyectosController.getProyectoById);
-router.put('/proyectos/:id', proyectosController.updateProyecto);
-router.delete('/proyectos/:id', proyectosController.deleteProyecto);
 
 module.exports = router;
