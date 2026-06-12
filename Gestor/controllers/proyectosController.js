@@ -1,6 +1,7 @@
 'use strict';
 
-const { Proyecto, Cotizacion, sequelize } = require('../models');
+const { Proyecto, Cotizacion, Evaluacion, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 // GET /api/proyectos
 const getProyectos = async (req, res) => {
@@ -41,7 +42,6 @@ const getProyectoById = async (req,res) => {
         res.status(500).json({error: error.message });
     }
 };
-
 
 // PUT /api/proyectos/:id/estado
 const updateProyectoEstado = async (req,res) => {
@@ -90,13 +90,12 @@ const deleteProyecto = async(req,res) => {
         }
 
         await proyecto.destroy();
-        res.json({ mensaje: 'Proyecto eliminado exitosamente. '});
+        res.json({ mensaje: 'Proyecto eliminado exitosamente.'});
     } catch (error){
         res.status(500).json({error: error.message});
     }
 };
-      
-      
+
 // POST /api/proyectos
 const createProyecto = async(req,res) => {
     try{
@@ -134,34 +133,31 @@ const createProyecto = async(req,res) => {
 };
 
 // GET /proyectos/filtrar
-const{Op} = require('sequelize');
-
 const filtrarProyecto = async(req,res) =>{
     try{
-        const {estado, descripcion, fecha_inicio,fecha_fin} = req.query
+        const {estado, descripcion, fecha_inicio, fecha_fin} = req.query;
         const where = {};
 
         if(estado) where.estado = estado;
-        if (descripcion) where.descripcion = {[Op.iLike]: `%${descripcion}`};
+        if (descripcion) where.descripcion = {[Op.iLike]: `%${descripcion}%`};
         if (fecha_inicio && fecha_fin){
-            where.fecha_inicio = {[Op.between]: [fecha_inicio,fecha_fin]};
+            where.fecha_inicio = {[Op.between]: [fecha_inicio, fecha_fin]};
         } else if (fecha_inicio){
             where.fecha_inicio = {[Op.gte]: fecha_inicio};
         } else if (fecha_fin){
             where.fecha_inicio = {[Op.lte]: fecha_fin};
         }
-        const proyectos = await Proyecto.findAll({ where});
+        const proyectos = await Proyecto.findAll({ where });
         res.json(proyectos);
     }catch(error){
         res.status(500).json({error: error.message});
     }
 };
 
-
 // GET /proyectos/activos
 const getProyectosActivos = async (req,res)=>{
     try{
-        const proyectos = await Proyecto.findAll({where: {estado: 'en_progreso',},});
+        const proyectos = await Proyecto.findAll({where: {estado: 'en_progreso'}});
         res.json(proyectos);
     }catch(error){
         res.status(500).json({error: error.message});
@@ -173,7 +169,7 @@ const estadisticasProyectos = async(req,res) =>{
     try{
         const total = await Proyecto.count();
         const porEstado = await Proyecto.findAll({
-            attributes: ['estado',[sequelize.fn('COUNT',sequelize.col('estado')),'cantidad']],
+            attributes: ['estado', [sequelize.fn('COUNT', sequelize.col('estado')), 'cantidad']],
             group: ['estado'],
             raw: true,
         });
@@ -190,25 +186,24 @@ const estadisticasProyectos = async(req,res) =>{
 // GET /proyectos/:id/cotizaciones
 const getCotizacionesProyecto = async(req,res) => {
     try{
-        const{id} = req.params;
+        const {id} = req.params;
 
         const proyecto = await Proyecto.findOne({where: {id_proyecto: id}});
         if (!proyecto) return res.status(404).json({error: 'Proyecto no encontrado'});
 
-        const cotizacion = await Cotizacion.findONe({where: {id: proyecto.id_cotizacion}});
+        const cotizacion = await Cotizacion.findOne({where: {id: proyecto.id_cotizacion}});
 
-        res.json(cotizacion ? [cotizacion]: []);
+        res.json(cotizacion ? [cotizacion] : []);
     }catch(error){
         res.status(500).json({error: error.message});
     }
-};  
+};
 
 // GET /proyectos/:id/evaluaciones
-const {Evaluacion} = require('../models');
 const getEvaluacionesProyecto = async(req, res) => {
     try{
-        const{id} = req.params;
-        const evaluaciones = await evaluacion.findAll({where: {id_proyecto: id}});
+        const {id} = req.params;
+        const evaluaciones = await Evaluacion.findAll({where: {id_proyecto: id}});
         res.json(evaluaciones);
     } catch (error){
         res.status(500).json({error: error.message});
@@ -217,28 +212,28 @@ const getEvaluacionesProyecto = async(req, res) => {
 
 // PUT /api/proyectos/:id
 const updateProyecto = async(req,res) => {
-  try {
-    const {id} = req.params;
-    const {id_cotizacion, descripcion, fecha_inicio, fecha_vencimiento, fecha_fin_real, estado} = req.body;
+    try {
+        const {id} = req.params;
+        const {id_cotizacion, descripcion, fecha_inicio, fecha_vencimiento, fecha_fin_real, estado} = req.body;
 
-    const proyecto = await Proyecto.findOne({where: {id_proyecto: id}});
-    if(!proyecto){
-      return res.status(404).json({error: 'Proyecto no encontrado'});
+        const proyecto = await Proyecto.findOne({where: {id_proyecto: id}});
+        if(!proyecto){
+            return res.status(404).json({error: 'Proyecto no encontrado'});
+        }
+
+        await proyecto.update({
+            id_cotizacion: id_cotizacion ?? proyecto.id_cotizacion,
+            descripcion: descripcion ?? proyecto.descripcion,
+            fecha_inicio: fecha_inicio ?? proyecto.fecha_inicio,
+            fecha_vencimiento: fecha_vencimiento ?? proyecto.fecha_vencimiento,
+            fecha_fin_real: fecha_fin_real ?? proyecto.fecha_fin_real,
+            estado: estado ?? proyecto.estado,
+        });
+
+        res.json({mensaje: 'Proyecto actualizado exitosamente', proyecto});
+    } catch (error){
+        res.status(500).json({error: error.message});
     }
-
-    await proyecto.update({
-      id_cotizacion: id_cotizacion ?? proyecto.id_cotizacion,
-      descripcion: descripcion ?? proyecto.descripcion,
-      fecha_inicio: fecha_inicio ?? proyecto.fecha_inicio,
-      fecha_vencimiento: fecha_vencimiento ?? proyecto.fecha_vencimiento,
-      fecha_fin_real: fecha_fin_real ?? proyecto.fecha_fin_real,
-      estado: estado ?? proyecto.estado,
-    });
-
-    res.json({mensaje: 'Proyecto actualizado exitosamente', proyecto})
-  } catch (error){
-    res.status(500).json({error: error.message});
-  }
 };
 
 module.exports = {

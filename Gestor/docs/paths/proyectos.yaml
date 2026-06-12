@@ -7,10 +7,14 @@
         description: Lista de proyectos
         content:
           application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Proyecto'
+            example:
+              - id_proyecto: 2
+                id_cotizacion: 6
+                descripcion: Construccion sede nueva
+                fecha_inicio: "2024-05-12"
+                fecha_vencimiento: "2024-09-01"
+                fecha_fin_real: null
+                estado: en_progreso
 
   post:
     summary: Crear un proyecto
@@ -20,32 +24,80 @@
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ProyectoInput'
+            type: object
+            required:
+              - id_cotizacion
+              - fecha_inicio
+              - fecha_vencimiento
+            properties:
+              id_cotizacion:
+                type: integer
+                minimum: 1
+                example: 6
+                description: ID de la cotización (debe existir)
+              descripcion:
+                type: string
+                minLength: 5
+                maxLength: 500
+                example: Construccion sede nueva
+                description: Descripción del proyecto (opcional, 5-500 caracteres)
+              fecha_inicio:
+                type: string
+                format: date
+                example: "2024-05-12"
+                description: Fecha de inicio (formato YYYY-MM-DD, no puede ser anterior a hoy)
+              fecha_vencimiento:
+                type: string
+                format: date
+                example: "2024-09-01"
+                description: Fecha de vencimiento (debe ser posterior a fecha_inicio)
+              fecha_fin_real:
+                type: string
+                format: date
+                nullable: true
+                example: null
+                description: Fecha final real (opcional, debe ser <= a fecha_vencimiento)
+              estado:
+                type: string
+                enum: [pendiente, en_progreso, completado, cancelado]
+                example: en_progreso
+                description: Estado del proyecto
     responses:
       '201':
         description: Proyecto creado exitosamente
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/Proyecto'
+            example:
+              message: Proyecto creado exitosamente
+              data:
+                id_proyecto: 2
+                id_cotizacion: 6
+                descripcion: Construccion sede nueva
+                fecha_inicio: "2024-05-12"
+                fecha_vencimiento: "2024-09-01"
+                fecha_fin_real: null
+                estado: en_progreso
       '400':
-        description: Campos obligatorios faltantes o inválidos
+        description: Validación fallida
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
+            example:
+              error: "id_cotizacion es requerido"
+              details:
+                - field: id_cotizacion
+                  message: El campo es requerido
+      '404':
+        description: Cotización no encontrada
+        content:
+          application/json:
+            example:
+              error: La cotización con ID 6 no existe
       '500':
         description: Error del servidor
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
+            example:
+              error: Error del servidor
 
 /proyectos/filtrar:
   get:
@@ -56,33 +108,60 @@
         in: query
         schema:
           type: string
+          enum: [pendiente, en_progreso, completado, cancelado]
         required: false
+        example: en_progreso
+        description: Filtrar por estado
       - name: descripcion
         in: query
         schema:
           type: string
+          minLength: 1
+          maxLength: 500
         required: false
+        example: Construccion
+        description: Buscar por descripción (contiene)
       - name: fecha_inicio
         in: query
         schema:
           type: string
           format: date
         required: false
+        example: "2024-05-12"
+        description: Fecha de inicio mínima
       - name: fecha_fin
         in: query
         schema:
           type: string
           format: date
         required: false
+        example: "2024-09-01"
+        description: Fecha de vencimiento máxima
     responses:
       '200':
         description: Lista filtrada de proyectos
         content:
           application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Proyecto'
+            example:
+              - id_proyecto: 2
+                id_cotizacion: 6
+                descripcion: Construccion sede nueva
+                fecha_inicio: "2024-05-12"
+                fecha_vencimiento: "2024-09-01"
+                fecha_fin_real: null
+                estado: en_progreso
+      '400':
+        description: Parámetro de filtro inválido
+        content:
+          application/json:
+            example:
+              error: "Formato de fecha inválido. Use YYYY-MM-DD"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
 
 /proyectos/activos:
   get:
@@ -93,10 +172,14 @@
         description: Proyectos activos
         content:
           application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Proyecto'
+            example:
+              - id_proyecto: 2
+                id_cotizacion: 6
+                descripcion: Construccion sede nueva
+                fecha_inicio: "2024-05-12"
+                fecha_vencimiento: "2024-09-01"
+                fecha_fin_real: null
+                estado: en_progreso
 
 /proyectos/estadisticas:
   get:
@@ -107,303 +190,333 @@
         description: Estadisticas de proyectos
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                total:
-                  type: integer
-                porEstado:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      estado:
-                        type: string
-                      cantidad:
-                        type: integer
+            example:
+              total: 15
+              porEstado:
+                - estado: en_progreso
+                  cantidad: 8
+                - estado: completado
+                  cantidad: 5
+                - estado: cancelado
+                  cantidad: 2
 
 /proyectos/{id}:
   get:
     summary: Obtener proyecto por ID
     tags: [Proyectos]
     parameters:
-      - in: path
-        name: id
+      - name: id
+        in: path
         required: true
+        description: ID del proyecto
         schema:
           type: integer
+          minimum: 1
+          example: 2
     responses:
       '200':
         description: Proyecto encontrado
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/Proyecto'
+            example:
+              id_proyecto: 2
+              id_cotizacion: 6
+              descripcion: Construccion sede nueva
+              fecha_inicio: "2024-05-12"
+              fecha_vencimiento: "2024-09-01"
+              fecha_fin_real: null
+              estado: en_progreso
+      '400':
+        description: ID inválido
+        content:
+          application/json:
+            example:
+              error: "El ID debe ser un número entero positivo"
       '404':
         description: Proyecto no encontrado
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
+            example:
+              error: "El proyecto con ID 2 no existe"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
 
   put:
     summary: Actualizar proyecto por ID
     tags: [Proyectos]
     parameters:
-      - in: path
-        name: id
+      - name: id
+        in: path
         required: true
+        description: ID del proyecto a actualizar
         schema:
           type: integer
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ProyectoInput'
-    responses:
-      '200':
-        description: Proyecto actualizado exitosamente
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Proyecto'
-      '404':
-        description: Proyecto no encontrado
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
-
-  delete:
-    summary: Eliminar proyecto por ID
-    tags: [Proyectos]
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: integer
-    responses:
-      '200':
-        description: Proyecto eliminado exitosamente
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                mensaje:
-                  type: string
-      '404':
-        description: Proyecto no encontrado
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
-
-/proyectos/{id}/estado:
-  put:
-    summary: Actualizar solo el estado de un proyecto
-    tags: [Proyectos]
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: integer
+          minimum: 1
+          example: 2
     requestBody:
       required: true
       content:
         application/json:
           schema:
             type: object
+            required:
+              - id_cotizacion
+              - fecha_inicio
+              - fecha_vencimiento
+            properties:
+              id_cotizacion:
+                type: integer
+                minimum: 1
+                example: 6
+                description: ID de la cotización (debe existir)
+              descripcion:
+                type: string
+                minLength: 5
+                maxLength: 500
+                example: Construccion sede nueva
+              fecha_inicio:
+                type: string
+                format: date
+                example: "2024-05-12"
+              fecha_vencimiento:
+                type: string
+                format: date
+                example: "2024-09-01"
+              fecha_fin_real:
+                type: string
+                format: date
+                nullable: true
+                example: null
+              estado:
+                type: string
+                enum: [pendiente, en_progreso, completado, cancelado]
+                example: en_progreso
+    responses:
+      '200':
+        description: Proyecto actualizado exitosamente
+        content:
+          application/json:
+            example:
+              message: Proyecto actualizado exitosamente
+              data:
+                id_proyecto: 2
+                id_cotizacion: 6
+                descripcion: Construccion sede nueva
+                fecha_inicio: "2024-05-12"
+                fecha_vencimiento: "2024-09-01"
+                fecha_fin_real: null
+                estado: en_progreso
+      '400':
+        description: Validación fallida
+        content:
+          application/json:
+            example:
+              error: "fecha_vencimiento debe ser posterior a fecha_inicio"
+              details:
+                - field: fecha_vencimiento
+                  message: "Debe ser mayor que fecha_inicio"
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            example:
+              error: "El proyecto con ID 2 no existe"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+  delete:
+    summary: Eliminar proyecto por ID
+    tags: [Proyectos]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proyecto a eliminar
+        schema:
+          type: integer
+          minimum: 1
+          example: 2
+    responses:
+      '200':
+        description: Proyecto eliminado exitosamente
+        content:
+          application/json:
+            example:
+              message: Proyecto eliminado exitosamente
+      '400':
+        description: No se puede eliminar
+        content:
+          application/json:
+            example:
+              error: "No se puede eliminar un proyecto que no está cancelado"
+      '404':
+        description: Proyecto no encontrado
+        content:
+          application/json:
+            example:
+              error: "El proyecto con ID 2 no existe"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
+
+/proyectos/{id}/estado:
+  put:
+    summary: Actualizar solo el estado de un proyecto
+    tags: [Proyectos]
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID del proyecto
+        schema:
+          type: integer
+          minimum: 1
+          example: 2
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - estado
             properties:
               estado:
                 type: string
+                enum: [pendiente, en_progreso, completado, cancelado]
                 example: en_progreso
+                description: Nuevo estado del proyecto
     responses:
       '200':
         description: Estado actualizado
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                mensaje:
-                  type: string
-                proyecto:
-                  $ref: '#/components/schemas/Proyecto'
+            example:
+              message: Estado actualizado exitosamente
+              proyecto:
+                id_proyecto: 2
+                id_cotizacion: 6
+                descripcion: Construccion sede nueva
+                fecha_inicio: "2024-05-12"
+                fecha_vencimiento: "2024-09-01"
+                fecha_fin_real: null
+                estado: en_progreso
       '400':
-        description: Estado invalido
+        description: Estado inválido
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
+            example:
+              error: "El estado debe ser uno de: pendiente, en_progreso, completado, cancelado"
       '404':
         description: Proyecto no encontrado
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
+            example:
+              error: "El proyecto con ID 2 no existe"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
 
 /proyectos/{id}/cotizaciones:
   get:
     summary: Obtener cotizaciones de un proyecto
     tags: [Proyectos]
     parameters:
-      - in: path
-        name: id
+      - name: id
+        in: path
         required: true
+        description: ID del proyecto
         schema:
           type: integer
+          minimum: 1
+          example: 2
     responses:
       '200':
         description: Lista de cotizaciones
         content:
           application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Cotizacion'
+            example:
+              - id: 10
+                total: 20050.00
+                estado: aprobada
+              - id: 11
+                total: 25000.00
+                estado: pendiente
+      '400':
+        description: ID inválido
+        content:
+          application/json:
+            example:
+              error: "El ID debe ser un número entero positivo"
       '404':
         description: Proyecto no encontrado
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
+            example:
+              error: "El proyecto con ID 2 no existe"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
 
 /proyectos/{id}/evaluaciones:
   get:
     summary: Listar evaluaciones del proyecto
     tags: [Proyectos]
     parameters:
-      - in: path
-        name: id
+      - name: id
+        in: path
         required: true
+        description: ID del proyecto
         schema:
           type: integer
+          minimum: 1
+          example: 2
     responses:
       '200':
         description: Evaluaciones del proyecto
         content:
           application/json:
-            schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/Evaluacion'
+            example:
+              - id: 5
+                id_proyecto: 2
+                rating: 4
+                descripcion: Buen avance y calidad
+              - id: 6
+                id_proyecto: 2
+                rating: 5
+                descripcion: Excelente trabajo del equipo
+      '400':
+        description: ID inválido
+        content:
+          application/json:
+            example:
+              error: "El ID debe ser un número entero positivo"
       '404':
         description: Proyecto no encontrado
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                error:
-                  type: string
-
-components:
-  schemas:
-    Proyecto:
-      type: object
-      properties:
-        id_proyecto:
-          type: integer
-          example: 2
-        id_cotizacion:
-          type: integer
-          example: 6
-        descripcion:
-          type: string
-          example: Construccion sede nueva
-        fecha_inicio:
-          type: string
-          format: date
-          example: "2024-05-12"
-        fecha_vencimiento:
-          type: string
-          format: date
-          example: "2024-09-01"
-        fecha_fin_real:
-          type: string
-          format: date
-          nullable: true
-          example: null
-        estado:
-          type: string
-          example: en_progreso
-
-    ProyectoInput:
-      type: object
-      required:
-        - id_cotizacion
-        - fecha_inicio
-        - fecha_vencimiento
-      properties:
-        id_cotizacion:
-          type: integer
-          example: 6
-        descripcion:
-          type: string
-          example: Construccion sede nueva
-        fecha_inicio:
-          type: string
-          format: date
-          example: "2024-05-12"
-        fecha_vencimiento:
-          type: string
-          format: date
-          example: "2024-09-01"
-        fecha_fin_real:
-          type: string
-          format: date
-          example: null
-        estado:
-          type: string
-          example: en_progreso
-
-    Cotizacion:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 10
-        total:
-          type: number
-          example: 20050.00
-        estado:
-          type: string
-          example: aprobada
-
-    Evaluacion:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 5
-        id_proyecto:
-          type: integer
-          example: 2
-        rating:
-          type: integer
-          example: 4
-        descripcion:
-          type: string
-          example: "Buen avance y calidad"
+            example:
+              error: "El proyecto con ID 2 no existe"
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error del servidor
