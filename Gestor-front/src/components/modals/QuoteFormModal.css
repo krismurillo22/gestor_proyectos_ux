@@ -1,0 +1,14 @@
+.quote-total-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.quote-total-value {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-semibold);
+}
