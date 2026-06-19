@@ -78,6 +78,14 @@
   border-radius: var(--radius-md);
 }
 
+.deadline-item-clickable {
+  cursor: pointer;
+}
+
+.deadline-item-clickable:hover {
+  border-color: var(--color-primary);
+}
+
 .deadline-right {
   display: flex;
   align-items: center;

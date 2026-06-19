@@ -1,14 +1,39 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, ArrowLeft, Mail, Phone, MapPin } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Mail, Phone, MapPin, Star } from 'lucide-react';
 import EntityFormModal from '../components/modals/EntityFormModal';
 import { getClients, createClient, getClientProjectHistory } from '../services/clientsService';
-import { getSuppliers, createSupplier } from '../services/suppliersService';
+import { getSuppliers, createSupplier, getSupplierAverageRating } from '../services/suppliersService';
 import './Clients.css';
 
 const TABS = [
   { key: 'clientes', label: 'Clientes' },
   { key: 'proveedores', label: 'Proveedores' },
 ];
+
+/** Estrellas + promedio numérico para un proveedor (ver getSupplierAverageRating). */
+function SupplierRating({ rating, size = 16 }) {
+  if (!rating || rating.average == null) {
+    return <p className="cell-muted">Sin evaluaciones todavía</p>;
+  }
+  const rounded = Math.round(rating.average);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      <div className="rating-stars">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <Star
+            key={value}
+            size={size}
+            className={value <= rounded ? 'rating-star-filled' : 'rating-star-empty'}
+            fill={value <= rounded ? 'currentColor' : 'none'}
+          />
+        ))}
+      </div>
+      <span className="cell-muted">
+        {rating.average.toFixed(1)} ({rating.count})
+      </span>
+    </div>
+  );
+}
 
 export default function Clients() {
   const [activeTab, setActiveTab] = useState('clientes');
@@ -19,6 +44,7 @@ export default function Clients() {
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [history, setHistory] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [supplierRatings, setSupplierRatings] = useState({});
 
   useEffect(() => {
     refresh();
@@ -30,6 +56,13 @@ export default function Clients() {
       setClients(clientsRes);
       setSuppliers(suppliersRes);
       setLoading(false);
+      Promise.all(suppliersRes.map((s) => getSupplierAverageRating(s.id))).then((ratings) => {
+        const byId = {};
+        suppliersRes.forEach((s, i) => {
+          byId[s.id] = ratings[i];
+        });
+        setSupplierRatings(byId);
+      });
     });
   }
 
@@ -101,6 +134,10 @@ export default function Clients() {
                 <p className="cell-muted" style={{ marginTop: '0.75rem' }}>
                   Órdenes activas: <span className="cell-strong">{selectedEntity.activeOrders}</span>
                 </p>
+                <p className="cell-muted" style={{ marginTop: '0.75rem' }}>
+                  Calificación promedio
+                </p>
+                <SupplierRating rating={supplierRatings[selectedEntity.id]} />
               </>
             )}
           </div>
@@ -195,6 +232,11 @@ export default function Clients() {
                   </>
                 )}
               </div>
+              {!('totalBilled' in entity) && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <SupplierRating rating={supplierRatings[entity.id]} size={13} />
+                </div>
+              )}
             </div>
           ))}
           {filteredList.length === 0 && <p className="empty-state">Sin resultados.</p>}

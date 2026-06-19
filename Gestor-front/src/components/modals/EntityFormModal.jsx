@@ -6,10 +6,19 @@ import './EntityFormModal.css';
  * Modal genérico para crear un cliente o un proveedor/taller (los dos
  * comparten los mismos campos básicos de contacto).
  *
+ * NOTA backend: los modelos Cliente/Proveedor hoy solo tienen
+ * nombre + rtn + activo, y el teléfono es una lista aparte
+ * (TelefonoCliente/TelefonoProveedor, varios por cliente) — no existen
+ * contacto/email/dirección todavía. Se dejan esos campos en el form porque
+ * son información real que la empresa necesita, pero falta agregarlos al
+ * modelo (y decidir si el teléfono pasa a ser una lista) antes de conectar
+ * esto de verdad. RTN sí existe en el backend.
+ *
  * @param {{ kind: 'cliente' | 'proveedor', onClose: Function, onSave: Function }} props
  */
 export default function EntityFormModal({ kind, onClose, onSave }) {
   const [name, setName] = useState('');
+  const [rtn, setRtn] = useState('');
   const [contact, setContact] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -18,7 +27,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (!name || !contact) return;
-    onSave({ name, contact, email, phone, address });
+    onSave({ name, rtn, contact, email, phone, address });
   }
 
   return (
@@ -56,6 +65,13 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
                 onChange={(e) => setContact(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="entity-rtn">
+                RTN
+              </label>
+              <input id="entity-rtn" className="form-input" value={rtn} onChange={(e) => setRtn(e.target.value)} />
             </div>
 
             <div className="form-grid-2">

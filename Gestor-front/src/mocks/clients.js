@@ -6,6 +6,7 @@ export const clientsData = [
   {
     id: 'CLI-001',
     name: 'Industrias Acero S.A.',
+    rtn: '0801-1985-123456',
     contact: 'Roberto Salinas',
     email: 'contacto@industriasacero.com',
     phone: '+52 55 1234 5678',
@@ -18,6 +19,7 @@ export const clientsData = [
   {
     id: 'CLI-002',
     name: 'Metalúrgica del Valle',
+    rtn: '0801-1990-654321',
     contact: 'Patricia Gómez',
     email: 'pgomez@metalurgicadelvalle.com',
     phone: '+52 81 2345 6789',
@@ -30,6 +32,7 @@ export const clientsData = [
   {
     id: 'CLI-003',
     name: 'Construcciones Hernández',
+    rtn: '0801-1978-789012',
     contact: 'Miguel Hernández',
     email: 'miguel@construccioneshernandez.com',
     phone: '+52 33 3456 7890',
@@ -38,6 +41,19 @@ export const clientsData = [
     activeProjects: 1,
     totalQuotes: 7,
     since: '2021-09-05',
+  },
+  {
+    id: 'CLI-004',
+    name: 'Ferretería Central',
+    rtn: '0801-2001-345678',
+    contact: 'Sandra López',
+    email: 'sandra@ferreteriacentral.com',
+    phone: '+52 55 7890 1234',
+    address: 'Av. Comercio 310, Puebla, PUE',
+    totalBilled: 4950.0,
+    activeProjects: 0,
+    totalQuotes: 1,
+    since: '2024-05-10',
   },
 ];
 

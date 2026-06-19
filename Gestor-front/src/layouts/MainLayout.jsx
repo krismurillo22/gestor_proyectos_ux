@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
+  Inbox,
   FileText,
   ClipboardList,
   Users,
@@ -17,6 +18,7 @@ import './MainLayout.css';
  */
 const NAV_ITEMS = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/solicitudes', icon: Inbox, label: 'Solicitudes' },
   { path: '/cotizaciones', icon: FileText, label: 'Cotizaciones' },
   { path: '/ordenes', icon: ClipboardList, label: 'Órdenes de Trabajo' },
   { path: '/clientes', icon: Users, label: 'Clientes y Proveedores' },
@@ -35,7 +37,7 @@ export default function MainLayout() {
     <div className="app-shell">
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
         <div className="sidebar-header">
-          {sidebarOpen && <h1 className="sidebar-logo">MachiShop ERP</h1>}
+          {sidebarOpen && <h1 className="sidebar-logo">Tecpro Sula</h1>}
           <button
             type="button"
             className="btn-icon"

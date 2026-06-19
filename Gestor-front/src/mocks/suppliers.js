@@ -7,6 +7,7 @@ export const suppliersData = [
   {
     id: 'PRV-001',
     name: 'Talleres Unidos S.R.L.',
+    rtn: '0801-1995-111222',
     contact: 'Ana Torres',
     email: 'ana.torres@talleresunidos.com',
     phone: '+52 55 4567 8901',
@@ -18,6 +19,7 @@ export const suppliersData = [
   {
     id: 'PRV-002',
     name: 'Taller Mecánico Ramírez',
+    rtn: '0801-1988-333444',
     contact: 'Luis Ramírez',
     email: 'luis@tallerramirez.com',
     phone: '+52 81 5678 9012',
@@ -29,6 +31,7 @@ export const suppliersData = [
   {
     id: 'PRV-003',
     name: 'Soldaduras y Acabados Méndez',
+    rtn: '0801-1992-555666',
     contact: 'Carlos Méndez',
     email: 'carlos@soldadurasmendez.com',
     phone: '+52 33 6789 0123',

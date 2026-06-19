@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { X, FileText, Trash2, Plus } from 'lucide-react';
-import './QuoteFormModal.css';
+import { suppliersData } from '../../mocks/suppliers';
 
 const emptyItem = () => ({ description: '', quantity: 1, unitPrice: 0 });
 
 /**
- * Modal para editar las líneas/notas de una cotización ya registrada
- * (mientras siga sin mandarse al cliente — el taller y la solicitud no
- * cambian una vez creada, así que aquí no se editan).
+ * Modal para registrar la cotización de UN taller dentro de una solicitud.
+ * Se puede usar varias veces sobre la misma solicitud (una vez por cada
+ * taller que cotice), para después comparar precios antes de elegir cuál
+ * mandar al cliente.
  *
- * onSave recibe { items, notes }.
+ * onSave recibe { supplierId, supplier, items, notes }.
  */
-export default function QuoteFormModal({ quote, onClose, onSave }) {
-  const [items, setItems] = useState(quote?.items?.length ? quote.items : [emptyItem()]);
-  const [notes, setNotes] = useState(quote?.notes ?? '');
+export default function AddQuoteModal({ onClose, onSave }) {
+  const [supplierId, setSupplierId] = useState('');
+  const [items, setItems] = useState([emptyItem()]);
+  const [notes, setNotes] = useState('');
 
   const total = items.reduce((sum, it) => sum + Number(it.quantity || 0) * Number(it.unitPrice || 0), 0);
 
@@ -31,7 +33,9 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    onSave({ items, notes, total });
+    const supplier = suppliersData.find((s) => s.id === supplierId);
+    if (!supplier) return;
+    onSave({ supplierId, supplier: supplier.name, items, notes });
   }
 
   return (
@@ -42,7 +46,7 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
             <span className="modal-icon">
               <FileText size={18} />
             </span>
-            <h2 className="page-title">Editar Cotización {quote?.id}</h2>
+            <h2 className="page-title">Agregar Cotización de Taller</h2>
           </div>
           <button type="button" className="btn-icon" onClick={onClose}>
             <X size={18} />
@@ -51,9 +55,25 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            <p className="cell-muted">
-              {quote?.supplier} · Solicitud {quote?.requestId}
-            </p>
+            <div className="form-group">
+              <label className="form-label" htmlFor="aq-supplier">
+                Taller
+              </label>
+              <select
+                id="aq-supplier"
+                className="form-select"
+                value={supplierId}
+                onChange={(e) => setSupplierId(e.target.value)}
+                required
+              >
+                <option value="">Selecciona un taller…</option>
+                {suppliersData.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="table-wrap">
               <table className="table">
@@ -115,16 +135,16 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
             </button>
 
             <div className="form-group" style={{ marginTop: '1.25rem' }}>
-              <label className="form-label" htmlFor="quote-notes">
+              <label className="form-label" htmlFor="aq-notes">
                 Notas
               </label>
               <textarea
-                id="quote-notes"
+                id="aq-notes"
                 className="form-textarea"
                 rows={3}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Condiciones, plazos de entrega, observaciones…"
+                placeholder="Condiciones, plazos de entrega, observaciones del taller…"
               />
             </div>
 
@@ -139,7 +159,7 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary">
-              Guardar Cambios
+              Guardar Cotización
             </button>
           </div>
         </form>

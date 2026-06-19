@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Plus, Clock, User } from 'lucide-react';
+import { Plus, Clock, Factory } from 'lucide-react';
 import { WORK_ORDER_COLUMNS } from '../mocks/workOrders';
 import WorkOrderDetailModal from '../components/modals/WorkOrderDetailModal';
 import WorkOrderFormModal from '../components/modals/WorkOrderFormModal';
-import { getWorkOrders, createWorkOrder, updateWorkOrderStatus } from '../services/workOrdersService';
+import WorkOrderEvaluationModal from '../components/modals/WorkOrderEvaluationModal';
+import { getWorkOrders, createWorkOrder, updateWorkOrderStatus, submitWorkOrderEvaluation } from '../services/workOrdersService';
 import './WorkOrders.css';
 
 export default function WorkOrders() {
@@ -12,6 +13,7 @@ export default function WorkOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
+  const [evaluatingOrder, setEvaluatingOrder] = useState(null);
 
   useEffect(() => {
     refresh();
@@ -33,8 +35,26 @@ export default function WorkOrders() {
 
   async function handleDrop(status) {
     if (!draggedId) return;
-    await updateWorkOrderStatus(draggedId, status);
+    const order = orders.find((o) => o.id === draggedId);
     setDraggedId(null);
+    if (!order) return;
+
+    // Completar una orden implica registrar la evaluación final del taller
+    // (control de calidad/desempeño), así que en vez de cambiar el estado
+    // de una, se abre el formulario de evaluación; el estado se actualiza
+    // al guardar esa evaluación.
+    if (status === 'Completada' && !order.evaluation) {
+      setEvaluatingOrder(order);
+      return;
+    }
+
+    await updateWorkOrderStatus(draggedId, status);
+    refresh();
+  }
+
+  async function handleSubmitEvaluation({ rating, notes }) {
+    await submitWorkOrderEvaluation(evaluatingOrder.id, { rating, notes });
+    setEvaluatingOrder(null);
     refresh();
   }
 
@@ -93,7 +113,7 @@ export default function WorkOrders() {
 
                       <div className="kanban-card-footer">
                         <span className="cell-muted">
-                          <User size={13} /> {order.operator}
+                          <Factory size={13} /> {order.supplier}
                         </span>
                         <span className="cell-muted">
                           <Clock size={13} /> {order.dueDate}
@@ -110,10 +130,24 @@ export default function WorkOrders() {
       )}
 
       {selectedOrder && (
-        <WorkOrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+        <WorkOrderDetailModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onEvaluate={(order) => {
+            setSelectedOrder(null);
+            setEvaluatingOrder(order);
+          }}
+        />
       )}
       {showAddModal && (
-        <WorkOrderFormModal onClose={() => setShowAddModal(false)} onSave={handleCreate} />
+        <WorkOrderFormModal
+          usedQuoteIds={orders.map((o) => o.quoteId)}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleCreate}
+        />
+      )}
+      {evaluatingOrder && (
+        <WorkOrderEvaluationModal order={evaluatingOrder} onClose={() => setEvaluatingOrder(null)} onSave={handleSubmitEvaluation} />
       )}
     </div>
   );

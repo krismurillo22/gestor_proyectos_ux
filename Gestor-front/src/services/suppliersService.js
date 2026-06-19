@@ -2,6 +2,7 @@
 import { apiClient } from './apiClient';
 import { simulateNetwork } from './mockUtils';
 import { suppliersData } from '../mocks/suppliers';
+import { workOrders } from '../mocks/workOrders';
 
 let mockSuppliers = [...suppliersData];
 
@@ -34,7 +35,8 @@ export async function getSupplierById(id) {
  * Crea un nuevo proveedor/taller.
  *
  * Endpoint real: POST /api/proveedores
- * Body esperado: { name, contact, email, phone, address }
+ * Body esperado: { name, rtn, contact, email, phone, address } — el modelo
+ * Proveedor del backend hoy solo tiene nombre/rtn (ver EntityFormModal.jsx).
  */
 export async function createSupplier(payload) {
   const newSupplier = {
@@ -47,4 +49,20 @@ export async function createSupplier(payload) {
   mockSuppliers = [...mockSuppliers, newSupplier];
   return simulateNetwork(newSupplier);
   // return apiClient.post('/proveedores', payload); // TODO: backend
+}
+
+/**
+ * Calificación promedio de un taller, calculada a partir de las
+ * evaluaciones finales de sus órdenes completadas.
+ *
+ * Endpoint real: GET /evaluaciones/proveedor/:id_proveedor/promedio
+ * (ya existe en el backend, solo falta consumirlo desde aquí)
+ */
+export async function getSupplierAverageRating(supplierId) {
+  const ratings = workOrders
+    .filter((o) => o.supplierId === supplierId && o.evaluation)
+    .map((o) => o.evaluation.rating);
+  const average = ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null;
+  return simulateNetwork({ average, count: ratings.length });
+  // return apiClient.get(`/evaluaciones/proveedor/${supplierId}/promedio`); // TODO: backend
 }

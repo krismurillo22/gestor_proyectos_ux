@@ -1,36 +1,38 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, ClipboardList } from 'lucide-react';
-import { quotesData } from '../../mocks/quotes';
-import { OPERATORS } from '../../mocks/workOrders';
+import { getQuotes } from '../../services/quotesService';
 import './WorkOrderFormModal.css';
 
-const ACCEPTED_QUOTES = quotesData.filter((q) => q.status === 'Aceptada');
-
 /**
- * Modal para crear una orden de trabajo a partir de una cotización
- * aceptada. El cliente se autocompleta (solo lectura) según la
- * cotización elegida.
+ * Modal para crear una orden de trabajo a partir de una cotización ya
+ * APROBADA por el cliente. El taller y el cliente quedan fijos según esa
+ * cotización (no se eligen a mano) — ya se decidieron cuando se aceptó.
+ *
+ * Solo se listan cotizaciones aprobadas que todavía no tienen una orden
+ * (usedQuoteIds), para no duplicar trabajo.
  */
-export default function WorkOrderFormModal({ onClose, onSave }) {
+export default function WorkOrderFormModal({ usedQuoteIds = [], onClose, onSave }) {
+  const [approvedQuotes, setApprovedQuotes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [quoteId, setQuoteId] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState('Media');
-  const [operator, setOperator] = useState('');
 
-  const selectedQuote = ACCEPTED_QUOTES.find((q) => q.id === quoteId);
+  useEffect(() => {
+    getQuotes({ estado: 'aprobada' }).then((data) => {
+      setApprovedQuotes(data.filter((q) => !usedQuoteIds.includes(q.id)));
+      setLoading(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedQuote = approvedQuotes.find((q) => q.id === quoteId);
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!quoteId || !description || !dueDate || !operator) return;
-    onSave({
-      quoteId,
-      client: selectedQuote?.client,
-      description,
-      dueDate,
-      priority,
-      operator,
-    });
+    if (!quoteId || !dueDate) return;
+    onSave({ quoteId, description, dueDate, priority });
   }
 
   return (
@@ -52,7 +54,7 @@ export default function WorkOrderFormModal({ onClose, onSave }) {
           <div className="modal-body">
             <div className="form-group">
               <label className="form-label" htmlFor="wo-quote">
-                Cotización aceptada
+                Cotización aprobada por el cliente
               </label>
               <select
                 id="wo-quote"
@@ -60,19 +62,31 @@ export default function WorkOrderFormModal({ onClose, onSave }) {
                 value={quoteId}
                 onChange={(e) => setQuoteId(e.target.value)}
                 required
+                disabled={loading}
               >
-                <option value="">Selecciona una cotización…</option>
-                {ACCEPTED_QUOTES.map((q) => (
+                <option value="">{loading ? 'Cargando…' : 'Selecciona una cotización…'}</option>
+                {approvedQuotes.map((q) => (
                   <option key={q.id} value={q.id}>
-                    {q.id} — {q.client}
+                    {q.id} — {q.client} ({q.supplier})
                   </option>
                 ))}
               </select>
+              {!loading && approvedQuotes.length === 0 && (
+                <p className="cell-muted" style={{ marginTop: '0.4rem' }}>
+                  No hay cotizaciones aprobadas pendientes de orden. Revisa Solicitudes.
+                </p>
+              )}
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Cliente</label>
-              <input className="form-input" value={selectedQuote?.client || ''} readOnly />
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label className="form-label">Cliente</label>
+                <input className="form-input" value={selectedQuote?.client || ''} readOnly />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Taller asignado</label>
+                <input className="form-input" value={selectedQuote?.supplier || ''} readOnly />
+              </div>
             </div>
 
             <div className="form-group">
@@ -85,7 +99,7 @@ export default function WorkOrderFormModal({ onClose, onSave }) {
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                required
+                placeholder={selectedQuote?.notes || ''}
               />
             </div>
 
@@ -119,33 +133,13 @@ export default function WorkOrderFormModal({ onClose, onSave }) {
                 </select>
               </div>
             </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="wo-operator">
-                Operador asignado
-              </label>
-              <select
-                id="wo-operator"
-                className="form-select"
-                value={operator}
-                onChange={(e) => setOperator(e.target.value)}
-                required
-              >
-                <option value="">Selecciona un operador…</option>
-                {OPERATORS.map((op) => (
-                  <option key={op} value={op}>
-                    {op}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button type="submit" className="btn btn-primary" disabled={!quoteId}>
               Crear Orden
             </button>
           </div>

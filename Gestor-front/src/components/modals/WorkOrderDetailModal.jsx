@@ -1,8 +1,8 @@
-import { X, ClipboardList, Paperclip, Clock } from 'lucide-react';
+import { X, ClipboardList, Paperclip, Clock, Star, ClipboardCheck } from 'lucide-react';
 import StatusBadge from '../StatusBadge';
 import './WorkOrderDetailModal.css';
 
-export default function WorkOrderDetailModal({ order, onClose }) {
+export default function WorkOrderDetailModal({ order, onClose, onEvaluate }) {
   if (!order) return null;
 
   return (
@@ -29,8 +29,8 @@ export default function WorkOrderDetailModal({ order, onClose }) {
                 <p className="cell-strong">{order.client}</p>
               </div>
               <div>
-                <p className="cell-muted">Operador</p>
-                <p className="cell-strong">{order.operator}</p>
+                <p className="cell-muted">Taller asignado</p>
+                <p className="cell-strong">{order.supplier}</p>
               </div>
               <div>
                 <p className="cell-muted">Fecha límite</p>
@@ -96,6 +96,39 @@ export default function WorkOrderDetailModal({ order, onClose }) {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="wo-section">
+            <h3 className="section-title">
+              <ClipboardCheck size={16} className="icon-primary" /> Evaluación final
+            </h3>
+            {order.evaluation ? (
+              <div>
+                <div className="rating-stars" aria-label={`${order.evaluation.rating} de 5 estrellas`}>
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <Star
+                      key={value}
+                      size={20}
+                      className={value <= order.evaluation.rating ? 'rating-star-filled' : 'rating-star-empty'}
+                      fill={value <= order.evaluation.rating ? 'currentColor' : 'none'}
+                    />
+                  ))}
+                </div>
+                <p className="cell-muted" style={{ marginTop: '0.5rem' }}>
+                  {order.evaluation.date}
+                </p>
+                <p style={{ marginTop: '0.25rem' }}>{order.evaluation.notes}</p>
+              </div>
+            ) : (
+              <div>
+                <p className="muted">Todavía no se registra evaluación (se hace al entregar al cliente).</p>
+                {onEvaluate && (
+                  <button type="button" className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => onEvaluate(order)}>
+                    Registrar evaluación
+                  </button>
+                )}
+              </div>
+            )}
           </section>
         </div>
 

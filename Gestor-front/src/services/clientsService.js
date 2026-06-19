@@ -47,7 +47,8 @@ export async function getClientProjectHistory(id) {
  * Crea un nuevo cliente.
  *
  * Endpoint real: POST /api/clientes
- * Body esperado: { name, contact, email, phone, address }
+ * Body esperado: { name, rtn, contact, email, phone, address } — el modelo
+ * Cliente del backend hoy solo tiene nombre/rtn/activo (ver EntityFormModal.jsx).
  */
 export async function createClient(payload) {
   const newClient = {

@@ -2,6 +2,7 @@
 import { apiClient } from './apiClient';
 import { simulateNetwork } from './mockUtils';
 import { workOrders } from '../mocks/workOrders';
+import { getQuoteById } from './quotesService';
 
 let mockWorkOrders = [...workOrders];
 
@@ -9,13 +10,13 @@ let mockWorkOrders = [...workOrders];
  * Lista las órdenes de trabajo (para la vista kanban).
  *
  * Endpoint real: GET /api/ordenes-trabajo
- * Query params sugeridos: ?status=&operator=&clientId=
+ * Query params sugeridos: ?status=&supplierId=&clientId=
  * Respuesta esperada: { data: WorkOrder[], total: number }
  */
 export async function getWorkOrders(filters = {}) {
   let filtered = mockWorkOrders;
   if (filters.status) filtered = filtered.filter((o) => o.status === filters.status);
-  if (filters.operator) filtered = filtered.filter((o) => o.operator === filters.operator);
+  if (filters.supplierId) filtered = filtered.filter((o) => o.supplierId === filters.supplierId);
   return simulateNetwork(filtered);
   // return apiClient.get('/ordenes-trabajo', { params: filters }); // TODO: backend
 }
@@ -33,22 +34,36 @@ export async function getWorkOrderById(id) {
 }
 
 /**
- * Crea una orden de trabajo a partir de una cotización aceptada.
+ * Crea una orden de trabajo a partir de una cotización APROBADA por el
+ * cliente. El taller (supplierId/supplier) y el cliente se derivan de la
+ * cotización — no se eligen a mano, porque ya quedaron decididos cuando
+ * el cliente aceptó esa cotización.
  *
  * Endpoint real: POST /api/ordenes-trabajo
- * Body esperado: { quoteId, description, dueDate, priority, operator }
- * Nota: el backend debería devolver también `client`, derivado de la
- * cotización (quoteId), no se debería mandar desde el front.
+ * Body esperado: { id_cotizacion, descripcion, fecha_vencimiento, priority }
+ * Nota: el backend debería devolver también `client`/`supplier`, derivados
+ * de la cotización, no se deberían mandar desde el front.
  */
-export async function createWorkOrder(payload) {
+export async function createWorkOrder({ quoteId, description, dueDate, priority }) {
+  const quote = await getQuoteById(quoteId);
+  if (!quote) throw new Error('Cotización no encontrada');
+  if (quote.estado !== 'aprobada') throw new Error('Solo se puede crear una orden desde una cotización aprobada por el cliente');
+
   const newOrder = {
     id: `OT-2024-${String(Math.floor(Math.random() * 900 + 100))}`,
+    quoteId,
+    client: quote.client,
+    supplierId: quote.supplierId,
+    supplier: quote.supplier,
+    description: description || quote.notes || '',
+    dueDate,
+    priority,
     progress: 0,
     status: 'Pendiente',
     statusHistory: [{ status: 'Pendiente', date: new Date().toISOString().slice(0, 10), note: 'Orden creada' }],
     technicalSpecs: [],
     attachedFiles: [],
-    ...payload,
+    evaluation: null,
   };
   mockWorkOrders = [newOrder, ...mockWorkOrders];
   return simulateNetwork(newOrder);
@@ -87,4 +102,31 @@ export async function updateWorkOrderProgress(id, progress) {
   const updated = mockWorkOrders.find((o) => o.id === id);
   return simulateNetwork(updated);
   // return apiClient.patch(`/ordenes-trabajo/${id}/progreso`, { progress }); // TODO: backend
+}
+
+/**
+ * Registra la evaluación final de calidad/desempeño al entregar la orden
+ * al cliente (equivale a la entidad Evaluacion del backend: 1-1 con
+ * Proyecto, rating 1-5 + observaciones). Además marca la orden como
+ * 'Completada'.
+ *
+ * Endpoint real: POST /api/proyectos/:id/evaluacion
+ * Body esperado: { rating: number (1-5), descripcion: string }
+ */
+export async function submitWorkOrderEvaluation(id, { rating, notes }) {
+  const evaluation = { rating, notes, date: new Date().toISOString().slice(0, 10) };
+  mockWorkOrders = mockWorkOrders.map((o) =>
+    o.id === id
+      ? {
+          ...o,
+          status: 'Completada',
+          progress: 100,
+          evaluation,
+          statusHistory: [...o.statusHistory, { status: 'Completada', date: evaluation.date, note: 'Entregado al cliente' }],
+        }
+      : o
+  );
+  const updated = mockWorkOrders.find((o) => o.id === id);
+  return simulateNetwork(updated);
+  // return apiClient.post(`/proyectos/${id}/evaluacion`, { rating, descripcion: notes }); // TODO: backend
 }

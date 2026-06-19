@@ -404,3 +404,40 @@
   padding: 3rem 1.5rem;
   color: var(--color-muted-foreground);
 }
+
+/* Fila de total al pie de un editor de líneas (cotizaciones). Usada por
+   QuoteFormModal y AddQuoteModal. */
+.quote-total-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.quote-total-value {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Selector/visualización de calificación con estrellas (evaluación final
+   de talleres). Usada por WorkOrderEvaluationModal, WorkOrderDetailModal
+   y el promedio por proveedor en Clientes y Proveedores. */
+.rating-stars {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rating-star-btn {
+  padding: 0.15rem;
+}
+
+.rating-star-filled {
+  color: #f59e0b;
+}
+
+.rating-star-empty {
+  color: var(--color-border);
+}

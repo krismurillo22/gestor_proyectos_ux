@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
+import Requests from './pages/Requests';
 import Quotes from './pages/Quotes';
 import WorkOrders from './pages/WorkOrders';
 import Clients from './pages/Clients';
@@ -17,6 +18,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="solicitudes" element={<Requests />} />
           <Route path="cotizaciones" element={<Quotes />} />
           <Route path="ordenes" element={<WorkOrders />} />
           <Route path="clientes" element={<Clients />} />

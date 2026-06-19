@@ -1,32 +1,29 @@
 /**
  * StatusBadge
  * -----------
- * Pastilla de color para mostrar el estado de una cotización, orden de
- * trabajo o nivel de stock. Es puramente visual (no llama servicios).
+ * Pastilla de color para mostrar el estado de una solicitud, cotización u
+ * orden de trabajo. Es puramente visual (no llama servicios).
  *
- * @param {{ status: string, type?: 'quote' | 'stock' | 'order' }} props
+ * @param {{ status: string, type?: 'request' | 'quote' | 'order' }} props
  */
 
 const VARIANTS_BY_TYPE = {
-  quote: {
-    borrador: 'badge-slate',
-    draft: 'badge-slate',
-    enviada: 'badge-sky',
-    sent: 'badge-sky',
-    aceptada: 'badge-emerald',
-    accepted: 'badge-emerald',
+  // Estado derivado de una Solicitud (ver services/requestsService.js)
+  request: {
+    cotizando: 'badge-slate',
+    'enviada al cliente': 'badge-sky',
+    aprobada: 'badge-emerald',
     rechazada: 'badge-red',
-    rejected: 'badge-red',
-    archivada: 'badge-slate-dark',
-    archived: 'badge-slate-dark',
   },
-  stock: {
-    ok: 'badge-emerald',
-    normal: 'badge-emerald',
-    bajo: 'badge-amber',
-    low: 'badge-amber',
-    'crítico': 'badge-red',
-    critical: 'badge-red',
+  // Estado de una Cotización individual. 'pendiente' coincide con el ENUM
+  // del backend; 'enviada al cliente' y 'descartada' son lectura del front
+  // sobre las banderas sentToClient/discarded (ver mocks/quotes.js).
+  quote: {
+    pendiente: 'badge-slate',
+    'enviada al cliente': 'badge-sky',
+    aprobada: 'badge-emerald',
+    rechazada: 'badge-red',
+    descartada: 'badge-slate-dark',
   },
   order: {
     pendiente: 'badge-slate',
