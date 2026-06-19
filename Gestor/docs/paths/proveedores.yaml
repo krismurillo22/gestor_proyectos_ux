@@ -1,28 +1,32 @@
 /proveedores:
   get:
-    summary: Listar todos los proveedores
+    summary: Listar proveedores activos
+    description: Retorna únicamente proveedores cuyo nombre no inicia con [INACTIVO].
     tags: [Proveedores]
     responses:
       '200':
-        description: Lista de proveedores
+        description: Lista de proveedores activos
         content:
           application/json:
             example:
               - id_proveedor: 1
                 nombre: Proveedor ABC
-                rtn: "0801-1990-00123"
+                rtn: "0801199901234"
                 telefonos:
-                  - telefono: "9999-9999"
+                  - id_telefono: 1
                     id_proveedor: 1
+                    telefono: "9999-8888"
+      '204':
+        description: No existen proveedores activos registrados
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al obtener proveedores
 
   post:
-    summary: Crear un proveedor
+    summary: Crear proveedor
     tags: [Proveedores]
     requestBody:
       required: true
@@ -35,16 +39,11 @@
             properties:
               nombre:
                 type: string
-                minLength: 1
-                maxLength: 255
                 example: Proveedor ABC
               rtn:
                 type: string
                 nullable: true
-                minLength: 14
-                maxLength: 20
-                pattern: '^\d{4}-\d{4}-\d{5}$'
-                example: "0801-1990-00123"
+                example: "0801199901234"
     responses:
       '201':
         description: Proveedor creado exitosamente
@@ -55,62 +54,75 @@
               data:
                 id_proveedor: 1
                 nombre: Proveedor ABC
-                rtn: "0801-1990-00123"
+                rtn: "0801199901234"
       '400':
-        description: El nombre es requerido
+        description: Datos inválidos
         content:
           application/json:
-            example:
-              error: El nombre es requerido
+            examples:
+              nombreRequerido:
+                value:
+                  error: El nombre es requerido
+              nombreInvalido:
+                value:
+                  error: El nombre no puede iniciar con [INACTIVO]
+              rtnDuplicado:
+                value:
+                  error: Ya existe un proveedor activo con este RTN
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al crear proveedor
 
 /proveedores/validar-rtn/{rtn}:
   get:
-    summary: Validar si existe un proveedor por RTN
+    summary: Validar RTN de proveedor activo
+    description: Valida si existe un proveedor activo con el RTN indicado.
     tags: [Proveedores]
     parameters:
       - name: rtn
         in: path
         required: true
-        description: RTN del proveedor
         schema:
           type: string
-          example: "0801-1990-00123"
+          example: "0801199901234"
     responses:
       '200':
         description: Resultado de validación
         content:
           application/json:
-            example:
-              existe: true
-              data:
-                id_proveedor: 1
-                nombre: Proveedor ABC
-                rtn: "0801-1990-00123"
+            examples:
+              existe:
+                value:
+                  existe: true
+                  data:
+                    id_proveedor: 1
+                    nombre: Proveedor ABC
+                    rtn: "0801199901234"
+              noExiste:
+                value:
+                  existe: false
+                  data: null
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al validar RTN del proveedor
 
 /proveedores/{id}:
   get:
-    summary: Obtener un proveedor por ID
+    summary: Obtener proveedor activo por ID
+    description: Retorna el proveedor solo si está activo.
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor
         schema:
           type: integer
-          minimum: 1
           example: 1
     responses:
       '200':
@@ -120,41 +132,35 @@
             example:
               id_proveedor: 1
               nombre: Proveedor ABC
-              rtn: "0801-1990-00123"
+              rtn: "0801199901234"
               telefonos:
-                - telefono: "9999-9999"
+                - id_telefono: 1
                   id_proveedor: 1
-              cotizaciones:
-                - id_cotizacion: 1
-                  id_solicitud: 1
-                  id_proveedor: 1
-                  total: 15000
-                  estado: pendiente
-                  descripcion: Cotización para remodelación
+                  telefono: "9999-8888"
+              cotizaciones: []
       '404':
-        description: Proveedor no encontrado
+        description: Proveedor no encontrado o inactivo
         content:
           application/json:
             example:
-              error: Proveedor no encontrado
+              error: Proveedor no encontrado o inactivo
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al obtener proveedor
 
-  put:
-    summary: Actualizar un proveedor
+  patch:
+    summary: Actualizar parcialmente proveedor
+    description: Permite actualizar nombre y/o RTN. No permite modificar proveedores inactivos.
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor a actualizar
         schema:
           type: integer
-          minimum: 1
           example: 1
     requestBody:
       required: true
@@ -162,21 +168,14 @@
         application/json:
           schema:
             type: object
-            required:
-              - nombre
             properties:
               nombre:
                 type: string
-                minLength: 1
-                maxLength: 255
                 example: Proveedor ABC Actualizado
               rtn:
                 type: string
                 nullable: true
-                minLength: 14
-                maxLength: 20
-                pattern: '^\d{4}-\d{4}-\d{5}$'
-                example: "0801-1990-00123"
+                example: "0801199905678"
     responses:
       '200':
         description: Proveedor actualizado exitosamente
@@ -187,45 +186,65 @@
               data:
                 id_proveedor: 1
                 nombre: Proveedor ABC Actualizado
-                rtn: "0801-1990-00123"
+                rtn: "0801199905678"
+      '400':
+        description: Datos inválidos
+        content:
+          application/json:
+            examples:
+              bodyVacio:
+                value:
+                  error: Debe enviar al menos un campo para actualizar
+              nombreVacio:
+                value:
+                  error: El nombre no puede estar vacío
+              nombreInvalido:
+                value:
+                  error: El nombre no puede iniciar con [INACTIVO]
+              rtnDuplicado:
+                value:
+                  error: Ya existe otro proveedor activo con este RTN
       '404':
-        description: Proveedor no encontrado
+        description: Proveedor no encontrado o inactivo
         content:
           application/json:
             example:
-              error: Proveedor no encontrado
+              error: Proveedor no encontrado o inactivo
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al actualizar proveedor
 
   delete:
-    summary: Eliminar un proveedor
+    summary: Desactivar proveedor
+    description: No elimina físicamente el proveedor. Marca el nombre con [INACTIVO].
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor a eliminar
         schema:
           type: integer
-          minimum: 1
           example: 1
     responses:
       '200':
-        description: Proveedor eliminado exitosamente
+        description: Proveedor desactivado exitosamente
         content:
           application/json:
             example:
-              message: Proveedor eliminado exitosamente
+              message: Proveedor desactivado exitosamente
+              data:
+                id_proveedor: 1
+                nombre: "[INACTIVO] Proveedor ABC"
+                rtn: "0801199901234"
       '400':
-        description: No se puede eliminar, tiene cotizaciones registradas
+        description: El proveedor ya está inactivo
         content:
           application/json:
             example:
-              error: No se puede eliminar el proveedor porque tiene cotizaciones registradas
+              error: El proveedor ya está inactivo
       '404':
         description: Proveedor no encontrado
         content:
@@ -233,25 +252,22 @@
             example:
               error: Proveedor no encontrado
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
-
+              error: Error interno al desactivar proveedor
 
 /proveedores/{id}/cotizaciones:
   get:
-    summary: Obtener cotizaciones de un proveedor
+    summary: Obtener cotizaciones de un proveedor activo
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor
         schema:
           type: integer
-          minimum: 1
           example: 1
     responses:
       '200':
@@ -260,67 +276,76 @@
           application/json:
             example:
               - id_cotizacion: 1
-                id_solicitud: 1
                 id_proveedor: 1
                 total: 15000
-                estado: aprobada
-                descripcion: Compra de materiales
+                estado: pendiente
+      '204':
+        description: El proveedor activo no tiene cotizaciones registradas
       '404':
-        description: Proveedor no encontrado
+        description: Proveedor no encontrado o inactivo
         content:
           application/json:
             example:
-              error: Proveedor no encontrado
+              error: Proveedor no encontrado o inactivo
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al obtener cotizaciones del proveedor
 
 /proveedores/{id}/proyectos:
   get:
-    summary: Obtener proyectos relacionados a un proveedor
+    summary: Obtener proyectos de un proveedor activo
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor
         schema:
           type: integer
-          minimum: 1
           example: 1
     responses:
       '200':
-        description: Lista de proyectos
+        description: Lista de proyectos asociados al proveedor
         content:
           application/json:
             example:
               - id_proyecto: 1
-                descripcion: Construcción de oficinas
-                estado: en_progreso
-                fecha_inicio: "2026-05-01"
-                fecha_vencimiento: "2026-08-01"
+                nombre: Proyecto de construcción
+                estado: completado
                 cotizacion:
                   id_cotizacion: 1
-                  total: 15000
+                  id_proveedor: 1
                 evaluacion:
+                  id_proyecto: 1
                   rating: 5
                   descripcion: Excelente trabajo
+      '204':
+        description: El proveedor activo no tiene proyectos registrados
       '404':
-        description: Proveedor no encontrado
+        description: Proveedor no encontrado o inactivo
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado o inactivo
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al obtener proyectos del proveedor
 
 /proveedores/{id}/estadisticas:
   get:
-    summary: Obtener estadísticas de un proveedor
+    summary: Obtener estadísticas de un proveedor activo
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor
         schema:
           type: integer
-          minimum: 1
           example: 1
     responses:
       '200':
@@ -331,33 +356,39 @@
               proveedor:
                 id_proveedor: 1
                 nombre: Proveedor ABC
-                rtn: "0801-1990-00123"
+                rtn: "0801199901234"
               estadisticas:
-                total_cotizaciones: 10
+                total_cotizaciones: 5
                 cotizaciones_pendientes: 2
-                cotizaciones_aprobadas: 6
-                cotizaciones_rechazadas: 2
-                total_facturado: 250000
-                total_proyectos: 5
-                proyectos_completados: 3
-                rating_promedio: 4.8
+                cotizaciones_aprobadas: 2
+                cotizaciones_rechazadas: 1
+                total_facturado: 35000
+                total_proyectos: 3
+                proyectos_completados: 2
+                rating_promedio: 4.5
       '404':
-        description: Proveedor no encontrado
+        description: Proveedor no encontrado o inactivo
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado o inactivo
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al obtener estadísticas del proveedor
 
 /proveedores/{id}/telefonos:
   post:
-    summary: Agregar teléfono a proveedor
+    summary: Agregar teléfono a proveedor activo
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor
         schema:
           type: integer
-          minimum: 1
           example: 1
     requestBody:
       required: true
@@ -370,7 +401,7 @@
             properties:
               telefono:
                 type: string
-                example: "9999-9999"
+                example: "9999-8888"
     responses:
       '201':
         description: Teléfono agregado exitosamente
@@ -379,41 +410,50 @@
             example:
               message: Teléfono agregado exitosamente
               data:
-                telefono: "9999-9999"
+                id_telefono: 1
                 id_proveedor: 1
+                telefono: "9999-8888"
       '400':
-        description: Teléfono requerido o ya existente
+        description: Datos inválidos
+        content:
+          application/json:
+            examples:
+              telefonoRequerido:
+                value:
+                  error: El teléfono es requerido
+              telefonoDuplicado:
+                value:
+                  error: Este teléfono ya está registrado para este proveedor
+      '404':
+        description: Proveedor no encontrado o inactivo
         content:
           application/json:
             example:
-              error: Este teléfono ya está registrado para este proveedor
-      '404':
-        description: Proveedor no encontrado
+              error: Proveedor no encontrado o inactivo
       '500':
-        description: Error del servidor
+        description: Error interno del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al agregar teléfono al proveedor
 
 /proveedores/{id}/telefonos/{telefono}:
   delete:
-    summary: Eliminar teléfono de proveedor
+    summary: Eliminar teléfono de proveedor activo
     tags: [Proveedores]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID del proveedor
         schema:
           type: integer
-          minimum: 1
           example: 1
-
       - name: telefono
         in: path
         required: true
-        description: Número telefónico
         schema:
           type: string
-          example: "9999-9999"
-
+          example: "9999-8888"
     responses:
       '200':
         description: Teléfono eliminado exitosamente
@@ -421,13 +461,20 @@
           application/json:
             example:
               message: Teléfono eliminado exitosamente
-
       '404':
-        description: Teléfono no encontrado
+        description: Proveedor o teléfono no encontrado
+        content:
+          application/json:
+            examples:
+              proveedorNoEncontrado:
+                value:
+                  error: Proveedor no encontrado o inactivo
+              telefonoNoEncontrado:
+                value:
+                  error: Teléfono no encontrado para este proveedor
+      '500':
+        description: Error interno del servidor
         content:
           application/json:
             example:
-              error: Teléfono no encontrado para este proveedor
-
-      '500':
-        description: Error del servidor
+              error: Error interno al eliminar teléfono del proveedor
