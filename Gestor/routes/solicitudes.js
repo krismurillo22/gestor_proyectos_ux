@@ -9,6 +9,7 @@ const {
 
 router.get('/solicitudes', solicitudesController.getSolicitudes);
 router.get('/solicitudes/cliente/:id_cliente', solicitudesController.getSolicitudesByCliente);
+router.get('/solicitudes/:id/cotizaciones', validarId, solicitudesController.getCotizacionesBySolicitud);
 router.get('/solicitudes/:id', validarId, solicitudesController.getSolicitudById);
 router.post('/solicitudes', validarCrearSolicitud, solicitudesController.createSolicitud);
 router.patch('/solicitudes/:id', validarActualizarSolicitud, solicitudesController.updateSolicitud);

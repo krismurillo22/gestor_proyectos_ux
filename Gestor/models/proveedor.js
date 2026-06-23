@@ -30,6 +30,22 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      contacto: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      correo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      telefono: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      direccion: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
     {
       sequelize,

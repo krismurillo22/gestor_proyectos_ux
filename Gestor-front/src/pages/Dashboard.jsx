@@ -12,7 +12,7 @@ const KPI_ICONS = {
   'proyectos-activos': ClipboardList,
   'cotizaciones-pendientes': FileText,
   'nuevos-clientes': Users,
-  'ingresos-mayo': TrendingUp,
+  'ingresos-mes': TrendingUp,
 };
 
 function deadlineBadgeClass(daysLeft) {

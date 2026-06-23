@@ -1,6 +1,6 @@
 'use strict';
 
-const { Solicitud, Cliente, Cotizacion } = require('../models');
+const { Solicitud, Cliente, Cotizacion, DetalleCotizacion } = require('../models');
 const { Op } = require('sequelize');
 
 // GET /api/solicitudes
@@ -72,6 +72,37 @@ const getSolicitudesByCliente = async (req, res) => {
     }
 
     res.json(solicitudes);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// GET /api/solicitudes/:id/cotizaciones
+// Cotizaciones recibidas para una solicitud (vista de comparación en el front).
+const getCotizacionesBySolicitud = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (isNaN(id) || id <= 0) {
+      return res.status(400).json({ error: 'El ID debe ser un número entero positivo' });
+    }
+
+    const solicitud = await Solicitud.findOne({ where: { id_solicitud: id, activo: true } });
+    if (!solicitud) {
+      return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    const cotizaciones = await Cotizacion.findAll({
+      where: { id_solicitud: id },
+      include: [{ model: DetalleCotizacion, as: 'detalles' }],
+      order: [['createdAt', 'DESC']],
+    });
+
+    if (cotizaciones.length === 0) {
+      return res.status(404).json({ error: 'Esta solicitud no tiene cotizaciones registradas' });
+    }
+
+    res.json(cotizaciones);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -187,6 +218,7 @@ module.exports = {
   getSolicitudes,
   getSolicitudById,
   getSolicitudesByCliente,
+  getCotizacionesBySolicitud,
   createSolicitud,
   updateSolicitud,
   desactivarSolicitud,

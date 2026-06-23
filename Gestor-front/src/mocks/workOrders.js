@@ -132,9 +132,13 @@ export const workOrders = [
   },
 ];
 
+// Solo 3 columnas: el control de calidad final se hace registrando la
+// Evaluacion antes de pasar a 'Completada' (ver workOrdersService.js), no es
+// un estado propio. 'Cancelada'/'Vencida' existen en el backend pero no se
+// muestran como columna (decisión de Jorge, 2026-06-23) — si una orden cae
+// en uno de esos estados, simplemente deja de listarse en el tablero.
 export const WORK_ORDER_COLUMNS = [
   { status: 'Pendiente', color: '#64748B' },
   { status: 'En Progreso', color: '#3B82F6' },
-  { status: 'Control de Calidad', color: '#F59E0B' },
   { status: 'Completada', color: '#10B981' },
 ];

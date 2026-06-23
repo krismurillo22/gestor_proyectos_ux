@@ -48,13 +48,20 @@ const getProveedorById = async (req, res) => {
 // POST /api/proveedores
 const createProveedor = async (req, res) => {
   try {
-    const { nombre, rtn } = req.body;
+    const { nombre, rtn, contacto, correo, telefono, direccion } = req.body;
 
     if (!nombre) {
       return res.status(400).json({ error: 'El nombre es requerido' });
     }
 
-    const proveedor = await Proveedor.create({ nombre, rtn });
+    const proveedor = await Proveedor.create({
+      nombre,
+      rtn,
+      contacto: contacto?.trim() || null,
+      correo: correo?.trim() || null,
+      telefono: telefono?.trim() || null,
+      direccion: direccion?.trim() || null,
+    });
 
     res.status(201).json({
       message: 'Proveedor creado exitosamente',
@@ -74,9 +81,16 @@ const updateProveedor = async (req, res) => {
       return res.status(404).json({ error: 'Proveedor no encontrado' });
     }
 
-    const { nombre, rtn } = req.body;
+    const { nombre, rtn, contacto, correo, telefono, direccion } = req.body;
 
-    await proveedor.update({ nombre, rtn });
+    await proveedor.update({
+      nombre,
+      rtn,
+      contacto: contacto?.trim() || null,
+      correo: correo?.trim() || null,
+      telefono: telefono?.trim() || null,
+      direccion: direccion?.trim() || null,
+    });
 
     res.json({
       message: 'Proveedor actualizado exitosamente',

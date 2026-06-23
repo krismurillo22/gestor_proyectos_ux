@@ -3,8 +3,8 @@ import { Plus, Search, ArrowLeft, Mail, Phone, MapPin, Star, Eye } from 'lucide-
 import EntityFormModal from '../components/modals/EntityFormModal';
 import WorkOrderDetailModal from '../components/modals/WorkOrderDetailModal';
 import StatusBadge from '../components/StatusBadge';
-import { getClients, createClient, getClientProjectHistory } from '../services/clientsService';
-import { getSuppliers, createSupplier, getSupplierAverageRating, getSupplierProjectHistory } from '../services/suppliersService';
+import { getClients, getClientById, createClient, getClientProjectHistory } from '../services/clientsService';
+import { getSuppliers, getSupplierById, createSupplier, getSupplierAverageRating, getSupplierProjectHistory } from '../services/suppliersService';
 import './Clients.css';
 
 const TABS = [
@@ -70,12 +70,23 @@ export default function Clients() {
     });
   }
 
+  // entity llega con los datos ya cargados en la lista (totalBilled/
+  // activeProjects/etc. en 0, no se calculan ahí por costo). Se muestra de
+  // entrada para que el perfil no quede en blanco mientras carga, y se
+  // reemplaza por el detalle real (getClientById/getSupplierById, que sí
+  // calcula esas estadísticas) en cuanto llega.
   function openProfile(entity) {
+    const isClientEntity = 'totalBilled' in entity;
     setSelectedEntity(entity);
     setHistory([]);
     setHistoryLoading(true);
-    const isClientEntity = 'totalBilled' in entity;
+
+    const fetchDetail = isClientEntity ? getClientById(entity.id) : getSupplierById(entity.id);
     const fetchHistory = isClientEntity ? getClientProjectHistory(entity.id) : getSupplierProjectHistory(entity.id);
+
+    fetchDetail.then((full) => {
+      if (full) setSelectedEntity(full);
+    });
     fetchHistory.then((data) => {
       setHistory(data);
       setHistoryLoading(false);

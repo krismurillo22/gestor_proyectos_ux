@@ -1,75 +1,82 @@
 /**
- * NOTA PARA QUIEN CONECTE EL BACKEND:
- * Cada función abajo tiene un bloque "ENDPOINT REAL" con método, ruta,
- * query/body y la forma de la respuesta esperada, además de una línea
- * `apiClient...` ya escrita (comentada) lista para descomentar.
- * Guía paso a paso con un ejemplo completo: ver GUIA_CONEXION_BACKEND.md
- * en esta misma carpeta.
+ * Conectado al backend real (Gestor).
+ *
+ * Huecos conocidos (no se inventan datos, se degrada con gracia):
+ *   - El backend no calcula variación vs. el período anterior (el mock tenía
+ *     cosas como "+12% vs mes anterior"). Esa comparación no existe hoy en
+ *     el backend, así que `change` queda vacío en vez de mostrar un número
+ *     inventado.
+ *   - El KPI de ingresos usa el mes actual real (antes el mock decía
+ *     siempre "Ingresos Mayo", fijo). Ver también KPI_ICONS en Dashboard.jsx,
+ *     que usa el id 'ingresos-mes' (ya no 'ingresos-mayo') para que el ícono
+ *     siga apareciendo.
  */
-// eslint-disable-next-line no-unused-vars -- queda listo para cuando se conecte el backend real (ver llamadas comentadas abajo)
 import { apiClient } from './apiClient';
-import { simulateNetwork } from './mockUtils';
-import { kpiData, chartData, projectsNearDeadline } from '../mocks/dashboard';
+import { STATUS_FROM_BACKEND } from './workOrdersService';
+
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+function formatMoney(value) {
+  const n = Number(value) || 0;
+  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 /**
  * KPIs principales del dashboard (las 4 tarjetas de arriba).
- *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/dashboard/kpis
- * Query:     (no aplica)
- * Body:      (no aplica — GET no lleva body)
- * Respuesta: Kpi[] → cada tarjeta como
- *            { id, label, value, change, color }
- *            (4 tarjetas: proyectos activos, cotizaciones pendientes,
- *            nuevos clientes, ingresos del mes)
- *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ * GET /api/dashboard/kpis → { proyectosActivos, cotizacionesPendientes, nuevosClientes, ingresosMes }
  */
 export async function getKpis() {
-  return simulateNetwork(kpiData);
-  // return apiClient.get('/dashboard/kpis'); // TODO: backend
+  const data = await apiClient.get('/dashboard/kpis');
+  const mesActual = MESES[new Date().getMonth()];
+
+  return [
+    { id: 'proyectos-activos', label: 'Proyectos Activos', value: data.proyectosActivos, change: '', color: 'sky' },
+    { id: 'cotizaciones-pendientes', label: 'Cotizaciones Pendientes', value: data.cotizacionesPendientes, change: '', color: 'amber' },
+    { id: 'nuevos-clientes', label: 'Nuevos Clientes', value: data.nuevosClientes, change: '', color: 'emerald' },
+    { id: 'ingresos-mes', label: `Ingresos ${mesActual}`, value: formatMoney(data.ingresosMes), change: '', color: 'primary' },
+  ];
 }
 
 /**
  * Serie histórica de cotizaciones por mes (gráfica de barras
  * cotizadas vs aceptadas).
- *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/dashboard/cotizaciones-por-mes
- * Query:     ?meses=6  (opcional, cuántos meses hacia atrás devolver)
- * Body:      (no aplica)
- * Respuesta: { month, cotizadas, aceptadas }[]
- *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ * GET /api/dashboard/cotizaciones-por-mes?meses=6 → { mes, cotizadas, aprobadas }[]
  *
  * @param {number} [months] cuántos meses hacia atrás mostrar (default 6)
  */
 export async function getChartData(months = 6) {
-  return simulateNetwork(chartData.slice(-months));
-  // return apiClient.get('/dashboard/cotizaciones-por-mes', { params: { meses: months } }); // TODO: backend
+  const filas = await apiClient.get('/dashboard/cotizaciones-por-mes', { params: { meses: months } });
+  return filas.map((f) => ({ month: f.mes, cotizadas: f.cotizadas, aceptadas: f.aprobadas }));
 }
 
 /**
  * Proyectos/órdenes próximas a vencer (panel de alertas del dashboard).
- *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/dashboard/proyectos-proximos-vencer
- * Query:     ?dias=7  (opcional, umbral de días para considerar "próximo a vencer")
- * Body:      (no aplica)
- * Respuesta: { id, client, dueDate, status, daysLeft }[]
- *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ * GET /api/dashboard/proyectos-proximos-vencer?dias=7 → Proyecto[] (con
+ * include cotizacion->solicitud->cliente, ver dashboardController.js)
  *
  * @param {number} [daysAhead] umbral de días (default 7)
  */
 export async function getProjectsNearDeadline(daysAhead = 7) {
-  const filtered = projectsNearDeadline.filter((p) => p.daysLeft <= daysAhead);
-  return simulateNetwork(filtered);
-  // return apiClient.get('/dashboard/proyectos-proximos-vencer', { params: { dias: daysAhead } }); // TODO: backend
+  const proyectos = await apiClient.get('/dashboard/proyectos-proximos-vencer', { params: { dias: daysAhead } });
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  return proyectos.map((p) => {
+    const vencimiento = new Date(p.fecha_vencimiento);
+    vencimiento.setHours(0, 0, 0, 0);
+    const daysLeft = Math.round((vencimiento - hoy) / 86400000);
+    const cliente = p.cotizacion?.solicitud?.cliente || {};
+
+    return {
+      id: p.id_proyecto,
+      client: cliente.nombre || '',
+      dueDate: p.fecha_vencimiento,
+      status: STATUS_FROM_BACKEND[p.estado] || p.estado,
+      daysLeft,
+    };
+  });
 }

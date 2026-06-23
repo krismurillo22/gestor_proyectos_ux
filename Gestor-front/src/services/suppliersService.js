@@ -1,146 +1,142 @@
 /**
- * NOTA PARA QUIEN CONECTE EL BACKEND:
- * Cada función abajo tiene un bloque "ENDPOINT REAL" con método, ruta,
- * query/body y la forma de la respuesta esperada, además de una línea
- * `apiClient...` ya escrita (comentada) lista para descomentar.
- * Guía paso a paso con un ejemplo completo: ver GUIA_CONEXION_BACKEND.md
- * en esta misma carpeta.
+ * Conectado al backend real (Gestor).
+ *
+ * Huecos conocidos (no se inventan datos, se degrada con gracia):
+ *   - contacto/correo/telefono/dirección se guardan como columnas directas
+ *     en Proveedor (migración 20260623232200). La tabla TelefonoProveedor
+ *     sigue existiendo (con sus endpoints propios) pero no se usa al crear/
+ *     editar — se deja como fallback por si tiene datos legados.
+ *   - No hay endpoint de búsqueda para proveedores (sí existe /clientes/
+ *     buscar, pero no su equivalente de proveedores) — getSuppliers filtra
+ *     en el front sobre la lista completa.
+ *   - totalPurchased/activeOrders se calculan a partir de
+ *     getWorkOrders({ supplierId }) (proyectos reales de este taller), no
+ *     de /proveedores/:id/estadisticas — así client y supplier usan la
+ *     misma fuente de verdad (proyectos completados = facturado).
  */
-// eslint-disable-next-line no-unused-vars -- queda listo para cuando se conecte el backend real (ver llamadas comentadas abajo)
 import { apiClient } from './apiClient';
-import { simulateNetwork } from './mockUtils';
-import { suppliersData } from '../mocks/suppliers';
-import { workOrders } from '../mocks/workOrders';
 import { getWorkOrders } from './workOrdersService';
 
-let mockSuppliers = [...suppliersData];
+function toDateStr(value) {
+  if (!value) return null;
+  const s = typeof value === 'string' ? value : value.toISOString();
+  return s.slice(0, 10);
+}
+
+function adaptProveedor(p) {
+  return {
+    id: p.id_proveedor,
+    name: p.nombre,
+    rtn: p.rtn || '',
+    contact: p.contacto || '',
+    email: p.correo || '',
+    phone: p.telefono || (p.telefonos || [])[0]?.telefono || '',
+    address: p.direccion || '',
+    totalPurchased: 0,
+    activeOrders: 0,
+    since: toDateStr(p.createdAt),
+  };
+}
 
 /**
  * Lista los proveedores/talleres (a quienes se asignan las órdenes de trabajo).
  *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/proveedores
- * Query:     ?search=  (opcional, filtra por nombre)
- * Body:      (no aplica)
- * Respuesta: Proveedor[] → { id, name, rtn, contact, email, phone, address,
- *            totalPurchased, activeOrders, since }
+ * GET /api/proveedores
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ * No existe un endpoint de búsqueda server-side para proveedores (a
+ * diferencia de clientes, que sí tiene /clientes/buscar) — el filtro por
+ * nombre se aplica aquí, sobre la lista completa.
  *
  * @param {string} [search]
  */
 export async function getSuppliers(search = '') {
-  const filtered = search
-    ? mockSuppliers.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
-    : mockSuppliers;
-  return simulateNetwork(filtered);
-  // return apiClient.get('/proveedores', { params: { search } }); // TODO: backend
+  const proveedores = await apiClient.get('/proveedores');
+  const adapted = proveedores.map(adaptProveedor);
+  return search ? adapted.filter((s) => s.name.toLowerCase().includes(search.toLowerCase())) : adapted;
 }
 
 /**
- * Obtiene el detalle de un proveedor/taller.
+ * Detalle de un proveedor (vista de perfil). A diferencia de getSuppliers,
+ * aquí sí se calculan totalPurchased/activeOrders reales, a partir de sus
+ * proyectos (ver nota de huecos conocidos arriba).
  *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/proveedores/:id
- * Query:     (no aplica)
- * Body:      (no aplica)
- * Respuesta: Proveedor → mismo shape que en getSuppliers, un solo objeto
+ * GET /api/proveedores/:id
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} id
+ * @param {string|number} id
  */
 export async function getSupplierById(id) {
-  const supplier = mockSuppliers.find((s) => s.id === id) || null;
-  return simulateNetwork(supplier);
-  // return apiClient.get(`/proveedores/${id}`); // TODO: backend
+  let proveedor;
+  try {
+    proveedor = await apiClient.get(`/proveedores/${id}`);
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+
+  const base = adaptProveedor(proveedor);
+  const orders = await getWorkOrders({ supplierId: id });
+  base.activeOrders = orders.filter((o) => o.status === 'Pendiente' || o.status === 'En Progreso').length;
+  base.totalPurchased = orders
+    .filter((o) => o.status === 'Completada')
+    .reduce((sum, o) => sum + (o.quoteTotal || 0), 0);
+
+  return base;
 }
 
 /**
  * Crea un nuevo proveedor/taller.
  *
- * ENDPOINT REAL
- * -------------
- * Método:    POST
- * Ruta:      /api/proveedores
- * Query:     (no aplica)
- * Body:      { name, rtn, contact, email, phone, address } — el modelo
- *            Proveedor del backend hoy solo tiene nombre/rtn (ver
- *            EntityFormModal.jsx); el resto de campos son solo del front
- *            por ahora.
- * Respuesta: Proveedor → el proveedor recién creado, con su id real
+ * POST /api/proveedores  body: { nombre, rtn, contacto, correo, telefono, direccion }
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {object} payload
+ * @param {{ name: string, rtn: string, contact?: string, email?: string, phone?: string, address?: string }} payload
  */
 export async function createSupplier(payload) {
-  const newSupplier = {
-    id: `PRV-${String(mockSuppliers.length + 1).padStart(3, '0')}`,
-    totalPurchased: 0,
-    activeOrders: 0,
-    since: new Date().toISOString().slice(0, 10),
-    ...payload,
-  };
-  mockSuppliers = [...mockSuppliers, newSupplier];
-  return simulateNetwork(newSupplier);
-  // return apiClient.post('/proveedores', payload); // TODO: backend
+  const { data } = await apiClient.post('/proveedores', {
+    nombre: payload.name,
+    rtn: payload.rtn,
+    contacto: payload.contact,
+    correo: payload.email,
+    telefono: payload.phone,
+    direccion: payload.address,
+  });
+  return adaptProveedor(data);
 }
 
 /**
- * Calificación promedio de un taller, calculada a partir de las
- * evaluaciones finales de sus órdenes completadas.
+ * Calificación promedio de un taller, calculada por el backend a partir de
+ * las evaluaciones finales de sus órdenes completadas.
  *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /evaluaciones/proveedor/:id_proveedor/promedio
- *            (ya existe en el backend, solo falta consumirlo desde aquí)
- * Query:     (no aplica)
- * Body:      (no aplica)
- * Respuesta: { average: number|null, count: number }
+ * GET /evaluaciones/proveedor/:id_proveedor/promedio →
+ * { id_proveedor, proveedor, rating_promedio, total_evaluaciones }
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ * Se traduce a { average, count } porque eso es lo que espera
+ * <SupplierRating> en Clients.jsx. rating_promedio llega en 0 cuando no hay
+ * evaluaciones (no null) — se traduce a `average: null` para que siga
+ * mostrando "Sin evaluaciones todavía" en vez de "0.0 (0) estrellas".
  *
- * @param {string} supplierId
+ * @param {string|number} supplierId
  */
 export async function getSupplierAverageRating(supplierId) {
-  const ratings = workOrders
-    .filter((o) => o.supplierId === supplierId && o.evaluation)
-    .map((o) => o.evaluation.rating);
-  const average = ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null;
-  return simulateNetwork({ average, count: ratings.length });
-  // return apiClient.get(`/evaluaciones/proveedor/${supplierId}/promedio`); // TODO: backend
+  try {
+    const data = await apiClient.get(`/evaluaciones/proveedor/${supplierId}/promedio`);
+    return { average: data.total_evaluaciones > 0 ? data.rating_promedio : null, count: data.total_evaluaciones || 0 };
+  } catch (error) {
+    if (error.status === 404) return { average: null, count: 0 };
+    throw error;
+  }
 }
 
 /**
  * Historial de órdenes de trabajo ejecutadas por este taller (sección
  * "Historial de proyectos" en su perfil, vista "Clientes y Proveedores").
- * Se apoya en workOrdersService.getWorkOrders (que sí mantiene el estado
- * mutable de las órdenes) en vez de leer el mock crudo, para que quede
- * al día con cambios hechos desde el kanban de Órdenes de Trabajo.
+ * Se apoya en workOrdersService.getWorkOrders (que ya hace el filtro
+ * id_proveedor en el backend y trae cliente/proveedor/evaluación incluidos).
  *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/proveedores/:id/historial
- * Query:     (no aplica)
- * Body:      (no aplica)
- * Respuesta: OrdenDeTrabajo[] → ordenadas por fecha límite, más reciente primero
- * Alternativa: GET /api/ordenes-trabajo?supplierId=:id — ya existe ese
- *            filtro en workOrdersService.getWorkOrders; decidir cuál
- *            expone el backend.
+ * GET /api/proyectos?id_proveedor=:id
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} supplierId
+ * @param {string|number} supplierId
  */
 export async function getSupplierProjectHistory(supplierId) {
   const orders = await getWorkOrders({ supplierId });
   return [...orders].sort((a, b) => (a.dueDate < b.dueDate ? 1 : -1));
-  // return apiClient.get(`/proveedores/${supplierId}/historial`); // TODO: backend
 }

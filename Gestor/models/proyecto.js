@@ -47,11 +47,14 @@ module.exports = (sequelize) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
-      // Estados sugeridos: 'en_progreso', 'completado', 'cancelado', 'vencido'
+      // Estados: 'pendiente' (recién creado, aún sin iniciar), 'en_progreso',
+      // 'completado', 'cancelado', 'vencido'. No existe 'control_calidad': el
+      // control de calidad final se hace registrando la Evaluacion antes de
+      // pasar a 'completado' (ver proyectosController.updateProyectoEstado).
       estado: {
-        type: DataTypes.ENUM('en_progreso', 'completado', 'cancelado', 'vencido'),
+        type: DataTypes.ENUM('pendiente', 'en_progreso', 'completado', 'cancelado', 'vencido'),
         allowNull: false,
-        defaultValue: 'en_progreso',
+        defaultValue: 'pendiente',
       },
     },
     {

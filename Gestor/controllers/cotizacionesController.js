@@ -10,7 +10,7 @@
 // }
 
 
-const { Cotizacion, DetalleCotizacion } = require('../models');
+const { Cotizacion, DetalleCotizacion, Proveedor, Solicitud, Cliente } = require('../models');
 
 // Estados posibles para cotizaciones
 const ESTADOS_COTIZACION = {
@@ -18,6 +18,16 @@ const ESTADOS_COTIZACION = {
   APROBADA: 'aprobada',
   RECHAZADA: 'rechazada'
 };
+
+// Includes estándar para devolver una cotización "completa": sus detalles,
+// el proveedor que la hizo y, a través de la solicitud, el cliente que la
+// pidió. Así el front (quotesService.js) puede mostrar taller/cliente sin
+// tener que pedirlos aparte.
+const COTIZACION_INCLUDES = [
+  { model: DetalleCotizacion, as: 'detalles' },
+  { model: Proveedor, as: 'proveedor' },
+  { model: Solicitud, as: 'solicitud', include: [{ model: Cliente, as: 'cliente' }] }
+];
 
 async function crearCotizacion(req, res) {
   try {
@@ -55,13 +65,36 @@ async function crearCotizacion(req, res) {
 
     // Volver a buscar la cotización ya con sus detalles guardados
     const cotizacionConDetalles = await Cotizacion.findByPk(nuevaCotizacion.id_cotizacion, {
-      include: [{ model: DetalleCotizacion, as: 'detalles' }]
+      include: COTIZACION_INCLUDES
     });
 
     return res.status(201).json({ ok: true, cotizacion: cotizacionConDetalles });
   } catch (error) {
     console.error('Error creando cotización:', error);
     return res.status(500).json({ ok: false, msg: 'Error interno creando cotización.' });
+  }
+}
+
+// GET /api/cotizaciones?estado=&id_solicitud=&id_proveedor=
+async function listarCotizaciones(req, res) {
+  try {
+    const { estado, id_solicitud, id_proveedor } = req.query;
+    const where = {};
+
+    if (estado) where.estado = estado;
+    if (id_solicitud) where.id_solicitud = id_solicitud;
+    if (id_proveedor) where.id_proveedor = id_proveedor;
+
+    const cotizaciones = await Cotizacion.findAll({
+      where,
+      include: COTIZACION_INCLUDES,
+      order: [['createdAt', 'DESC']]
+    });
+
+    return res.status(200).json({ ok: true, cotizaciones });
+  } catch (error) {
+    console.error('Error listando cotizaciones:', error);
+    return res.status(500).json({ ok: false, msg: 'Error interno listando cotizaciones.' });
   }
 }
 
@@ -76,7 +109,7 @@ async function obtenerCotizacionPorId(req, res) {
 
     // Buscar cotización con sus detalles
     const cotizacion = await Cotizacion.findByPk(id, {
-      include: [{ model: DetalleCotizacion, as: 'detalles' }]
+      include: COTIZACION_INCLUDES
     });
 
     if (!cotizacion) {
@@ -107,7 +140,8 @@ async function aprobarCotizacion(req, res) {
     cotizacion.estado = ESTADOS_COTIZACION.APROBADA;
     await cotizacion.save();
 
-    return res.status(200).json({ ok: true, cotizacion });
+    const cotizacionCompleta = await Cotizacion.findByPk(id, { include: COTIZACION_INCLUDES });
+    return res.status(200).json({ ok: true, cotizacion: cotizacionCompleta });
   } catch (error) {
     console.error('Error aprobando cotización:', error);
     return res.status(500).json({ ok: false, msg: 'Error interno aprobando cotización.' });
@@ -131,20 +165,53 @@ async function rechazarCotizacion(req, res) {
     cotizacion.estado = ESTADOS_COTIZACION.RECHAZADA;
     await cotizacion.save();
 
-    return res.status(200).json({ ok: true, cotizacion });
+    const cotizacionCompleta = await Cotizacion.findByPk(id, { include: COTIZACION_INCLUDES });
+    return res.status(200).json({ ok: true, cotizacion: cotizacionCompleta });
   } catch (error) {
     console.error('Error rechazando cotización:', error);
     return res.status(500).json({ ok: false, msg: 'Error interno rechazando cotización.' });
   }
 }
 
-//module.exports = { crearCotizacion, obtenerCotizacionPorId, aprobarCotizacion, rechazarCotizacion };
+// PATCH: Marcar la cotización como la elegida para enviar al cliente.
+// Solo debe haber una cotización "enviada" por solicitud, así que al marcar
+// esta se desmarcan las demás cotizaciones de la misma solicitud.
+async function enviarACliente(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ ok: false, msg: 'ID de cotización requerido.' });
+    }
+
+    const cotizacion = await Cotizacion.findByPk(id);
+    if (!cotizacion) {
+      return res.status(404).json({ ok: false, msg: 'Cotización no encontrada.' });
+    }
+
+    await Cotizacion.update(
+      { enviada_cliente: false },
+      { where: { id_solicitud: cotizacion.id_solicitud } }
+    );
+
+    cotizacion.enviada_cliente = true;
+    await cotizacion.save();
+
+    const cotizacionCompleta = await Cotizacion.findByPk(id, { include: COTIZACION_INCLUDES });
+    return res.status(200).json({ ok: true, cotizacion: cotizacionCompleta });
+  } catch (error) {
+    console.error('Error enviando cotización al cliente:', error);
+    return res.status(500).json({ ok: false, msg: 'Error interno enviando cotización al cliente.' });
+  }
+}
 
 // PUT: Modificar una cotización por ID (incluye reemplazo de detalles)
+// También se usa para descartar/restaurar una cotización en la vista de
+// comparación, mandando solo { descartada: true/false } en el body.
 async function modificarCotizacion(req, res) {
   try {
     const { id } = req.params;
-    const { id_solicitud, id_proveedor, total, estado, detalles } = req.body;
+    const { id_solicitud, id_proveedor, total, estado, detalles, descartada } = req.body;
 
     if (!id) return res.status(400).json({ ok: false, msg: 'ID de cotización requerido.' });
 
@@ -156,6 +223,7 @@ async function modificarCotizacion(req, res) {
     if (id_proveedor !== undefined) cotizacion.id_proveedor = id_proveedor;
     if (total !== undefined) cotizacion.total = total;
     if (estado !== undefined) cotizacion.estado = estado;
+    if (descartada !== undefined) cotizacion.descartada = descartada;
 
     await cotizacion.save();
 
@@ -181,7 +249,7 @@ async function modificarCotizacion(req, res) {
 
     // Obtener cotizacion actualizada con sus detalles
     const cotizacionActualizada = await Cotizacion.findByPk(cotizacion.id_cotizacion, {
-      include: [{ model: DetalleCotizacion, as: 'detalles' }]
+      include: COTIZACION_INCLUDES
     });
 
     return res.status(200).json({ ok: true, cotizacion: cotizacionActualizada });
@@ -191,4 +259,12 @@ async function modificarCotizacion(req, res) {
   }
 }
 
-module.exports = { crearCotizacion, obtenerCotizacionPorId, aprobarCotizacion, rechazarCotizacion, modificarCotizacion };
+module.exports = {
+  crearCotizacion,
+  listarCotizaciones,
+  obtenerCotizacionPorId,
+  aprobarCotizacion,
+  rechazarCotizacion,
+  enviarACliente,
+  modificarCotizacion
+};

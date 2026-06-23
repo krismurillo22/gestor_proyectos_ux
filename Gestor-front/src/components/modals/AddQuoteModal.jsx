@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, FileText, Trash2, Plus } from 'lucide-react';
-import { suppliersData } from '../../mocks/suppliers';
+import { getSuppliers } from '../../services/suppliersService';
 import './AddQuoteModal.css';
 
 const emptyItem = () => ({ title: '', description: '', quantity: 1, unitPrice: 0 });
@@ -43,10 +43,22 @@ function FieldError({ message }) {
  * subtotal, tax, total }.
  */
 export default function AddQuoteModal({ onClose, onSave }) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [supplierId, setSupplierId] = useState('');
   const [items, setItems] = useState([emptyItem()]);
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState({});
+
+  // Los proveedores se piden al backend al abrir el modal (antes venían de
+  // un mock estático) porque el backend necesita el id numérico real del
+  // proveedor para crear la cotización.
+  useEffect(() => {
+    getSuppliers().then((data) => {
+      setSuppliers(data);
+      setLoadingSuppliers(false);
+    });
+  }, []);
 
   // 'value' o 'percent': cuál de los dos campos de la tarifa fue el último
   // que el usuario editó a mano. El otro se recalcula a partir de ese cada
@@ -135,10 +147,10 @@ export default function AddQuoteModal({ onClose, onSave }) {
     const validationErrors = validate();
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
-    const supplier = suppliersData.find((s) => s.id === supplierId);
+    const supplier = suppliers.find((s) => String(s.id) === String(supplierId));
     if (!supplier) return;
     onSave({
-      supplierId,
+      supplierId: supplier.id,
       supplier: supplier.name,
       items,
       notes,
@@ -179,10 +191,11 @@ export default function AddQuoteModal({ onClose, onSave }) {
                   if (errors.supplier) setErrors((prev) => ({ ...prev, supplier: undefined }));
                 }}
                 aria-invalid={Boolean(errors.supplier)}
+                disabled={loadingSuppliers}
                 required
               >
-                <option value="">Selecciona un proveedor…</option>
-                {suppliersData.map((s) => (
+                <option value="">{loadingSuppliers ? 'Cargando proveedores…' : 'Selecciona un proveedor…'}</option>
+                {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>

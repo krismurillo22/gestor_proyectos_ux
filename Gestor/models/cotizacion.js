@@ -62,6 +62,18 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      // Marca la cotización elegida para enviar al cliente (solo una por solicitud).
+      enviada_cliente: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      // Permite "descartar" una cotización en la vista de comparación sin borrarla.
+      descartada: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
     {
       sequelize,
