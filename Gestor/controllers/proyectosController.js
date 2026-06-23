@@ -5,7 +5,10 @@ const { Op } = require('sequelize');
 
 // Helpers de validación de fechas y estados
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const estadosValidos = ['pendiente', 'en_progreso', 'completado', 'cancelado'];
+// Debe coincidir exactamente con el ENUM real de la columna Proyectos.estado
+// (ver models/proyecto.js y la migración create-proyecto): no incluye 'pendiente',
+// sí incluye 'vencido'.
+const estadosValidos = ['en_progreso', 'completado', 'cancelado', 'vencido'];
 
 const isValidDateString = (s) => typeof s === 'string' && DATE_RE.test(s) && !Number.isNaN(new Date(s).getTime());
 const toDateOnly = (s) => {
@@ -204,7 +207,7 @@ const createProyecto = async(req,res) => {
             fecha_inicio,
             fecha_vencimiento,
             fecha_fin_real: fecha_fin_real ?? null,
-            estado: estado || 'pendiente'
+            estado: estado || 'en_progreso'
         });
 
         res.status(201).json({

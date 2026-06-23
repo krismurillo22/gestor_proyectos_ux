@@ -33,21 +33,32 @@ async function crearCotizacion(req, res) {
       id_solicitud,
       id_proveedor,
       total,
-      estado,
-      fecha: new Date()
+      estado
     });
 
     // Crear detalles asociados
+    // OJO: los nombres de campo deben coincidir con el modelo DetalleCotizacion
+    // (id_cotizacion, nombre, valor, cantidad, descripcion), no con cotizacion_id/
+    // producto_id/precio_unitario/descripcion_item. Se acepta tanto `nombre`/`valor`
+    // como `titulo`/`precio_unitario` por si el front manda cualquiera de los dos.
     const detallesToCreate = detalles.map(d => ({
-      cotizacion_id: nuevaCotizacion.id,
-      producto_id: d.producto_id || null,
-      cantidad: d.cantidad || 0,
-      precio_unitario: d.precio_unitario || 0,
-      descripcion: d.descripcion_item || null
+      id_cotizacion: nuevaCotizacion.id_cotizacion,
+      nombre: d.nombre || d.titulo || '',
+      valor: d.valor ?? d.precio_unitario ?? 0,
+      cantidad: d.cantidad || 1,
+      descripcion: d.descripcion || null
     }));
 
-  
-    return res.status(201).json({ ok: true, cotizacion: nuevaCotizacion, estado: nuevaCotizacion.estado });
+    if (detallesToCreate.length) {
+      await DetalleCotizacion.bulkCreate(detallesToCreate);
+    }
+
+    // Volver a buscar la cotización ya con sus detalles guardados
+    const cotizacionConDetalles = await Cotizacion.findByPk(nuevaCotizacion.id_cotizacion, {
+      include: [{ model: DetalleCotizacion, as: 'detalles' }]
+    });
+
+    return res.status(201).json({ ok: true, cotizacion: cotizacionConDetalles });
   } catch (error) {
     console.error('Error creando cotización:', error);
     return res.status(500).json({ ok: false, msg: 'Error interno creando cotización.' });
@@ -149,15 +160,18 @@ async function modificarCotizacion(req, res) {
     await cotizacion.save();
 
     // Si vienen detalles, reemplazarlos: eliminar existentes y crear los nuevos
+    // OJO: la PK de Cotizacion es id_cotizacion (no id), y el modelo DetalleCotizacion
+    // usa id_cotizacion/nombre/valor/cantidad/descripcion (no cotizacion_id/producto_id/
+    // precio_unitario/descripcion_item).
     if (Array.isArray(detalles)) {
-      await DetalleCotizacion.destroy({ where: { cotizacion_id: cotizacion.id } });
+      await DetalleCotizacion.destroy({ where: { id_cotizacion: cotizacion.id_cotizacion } });
 
       const detallesToCreate = detalles.map(d => ({
-        cotizacion_id: cotizacion.id,
-        producto_id: d.producto_id || null,
-        cantidad: d.cantidad || 0,
-        precio_unitario: d.precio_unitario || 0,
-        descripcion: d.descripcion_item || null
+        id_cotizacion: cotizacion.id_cotizacion,
+        nombre: d.nombre || d.titulo || '',
+        valor: d.valor ?? d.precio_unitario ?? 0,
+        cantidad: d.cantidad || 1,
+        descripcion: d.descripcion || null
       }));
 
       if (detallesToCreate.length) {
@@ -166,7 +180,7 @@ async function modificarCotizacion(req, res) {
     }
 
     // Obtener cotizacion actualizada con sus detalles
-    const cotizacionActualizada = await Cotizacion.findByPk(cotizacion.id, {
+    const cotizacionActualizada = await Cotizacion.findByPk(cotizacion.id_cotizacion, {
       include: [{ model: DetalleCotizacion, as: 'detalles' }]
     });
 
