@@ -1,0 +1,102 @@
+/* Estilos específicos del editor de líneas + tarifa de intermediación de
+   AddQuoteModal. El resto (modal-*, form-*, quote-total-row) vive en
+   src/styles/shared.css. */
+
+.quote-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quote-item-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  background: var(--color-background);
+}
+
+.quote-item-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.quote-item-card-header .form-input {
+  flex: 1;
+}
+
+.quote-item-description {
+  min-height: 2.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.quote-item-card-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.quote-item-field label {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.quote-item-subtotal p {
+  padding: 0.75rem 0;
+  margin: 0;
+}
+
+/* ===== Tarifa de Intermediación y Garantía de Servicio ===== */
+.quote-fee-panel {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-muted);
+}
+
+.quote-fee-title {
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.quote-fee-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.quote-fee-field {
+  margin-bottom: 0;
+}
+
+.quote-fee-percent-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.quote-fee-percent-input .form-input {
+  padding-right: 2rem;
+}
+
+.quote-fee-percent-sign {
+  position: absolute;
+  right: 1rem;
+  color: var(--color-muted-foreground);
+  font-size: 0.9rem;
+}
+
+/* ===== Desglose final (Subtotal / Tarifa / Total) ===== */
+.quote-totals-breakdown {
+  margin-top: 1.25rem;
+}
+
+.quote-totals-line {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+}

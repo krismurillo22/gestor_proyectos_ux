@@ -1,0 +1,58 @@
+/**
+ * Datos mock de clientes (empresas que solicitan cotizaciones).
+ * Reemplazar por GET /api/clientes (ver src/services/clientsService.js).
+ */
+export const clientsData = [
+  {
+    id: 'CLI-001',
+    name: 'Industrias Acero S.A.',
+    rtn: '0801-1985-123456',
+    contact: 'Roberto Salinas',
+    email: 'contacto@industriasacero.com',
+    phone: '+52 55 1234 5678',
+    address: 'Av. Industrial 450, Monterrey, NL',
+    totalBilled: 145600.0,
+    activeProjects: 3,
+    totalQuotes: 12,
+    since: '2022-03-15',
+  },
+  {
+    id: 'CLI-002',
+    name: 'Metalúrgica del Valle',
+    rtn: '0801-1990-654321',
+    contact: 'Patricia Gómez',
+    email: 'pgomez@metalurgicadelvalle.com',
+    phone: '+52 81 2345 6789',
+    address: 'Calle Forja 22, Guadalajara, JAL',
+    totalBilled: 98300.0,
+    activeProjects: 2,
+    totalQuotes: 9,
+    since: '2023-01-10',
+  },
+  {
+    id: 'CLI-003',
+    name: 'Construcciones Hernández',
+    rtn: '0801-1978-789012',
+    contact: 'Miguel Hernández',
+    email: 'miguel@construccioneshernandez.com',
+    phone: '+52 33 3456 7890',
+    address: 'Blvd. de los Constructores 88, CDMX',
+    totalBilled: 210750.0,
+    activeProjects: 1,
+    totalQuotes: 7,
+    since: '2021-09-05',
+  },
+  {
+    id: 'CLI-004',
+    name: 'Ferretería Central',
+    rtn: '0801-2001-345678',
+    contact: 'Sandra López',
+    email: 'sandra@ferreteriacentral.com',
+    phone: '+52 55 7890 1234',
+    address: 'Av. Comercio 310, Puebla, PUE',
+    totalBilled: 4950.0,
+    activeProjects: 0,
+    totalQuotes: 1,
+    since: '2024-05-10',
+  },
+];

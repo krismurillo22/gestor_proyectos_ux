@@ -1,0 +1,89 @@
+/**
+ * theme.css
+ * ---------
+ * Tokens de diseño (colores, radios, tipografía) tomados 1:1 del archivo
+ * de Figma (theme.css exportado). Aquí NO hay reglas de Tailwind: son
+ * variables CSS planas que cualquier .css del proyecto puede usar con
+ * var(--color-x).
+ *
+ * Si el equipo de diseño cambia paleta en Figma, este es el ÚNICO archivo
+ * que debería tocarse para propagar el cambio a toda la app.
+ */
+
+:root {
+  /* Tipografía */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Colores base */
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f172a;
+
+  /* Marca */
+  --color-primary: #0ea5e9;
+  --color-primary-hover: #0c8fcb;
+  --color-primary-foreground: #ffffff;
+
+  /* Secundarios / neutros */
+  --color-secondary: #f1f5f9;
+  --color-secondary-hover: #e4e9ef;
+  --color-secondary-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #f1f5f9;
+  --color-accent-foreground: #0f172a;
+
+  /* Estados */
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #10b981;
+  --color-success-hover: #0ea271;
+  --color-warning: #f59e0b;
+
+  /* Bordes / inputs */
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-input-background: #ffffff;
+  --color-ring: #0ea5e9;
+
+  /* Gráficas */
+  --color-chart-1: #0ea5e9;
+  --color-chart-2: #10b981;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #ef4444;
+  --color-chart-5: #64748b;
+
+  /* Radios */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+/*
+ * Modo oscuro: el Figma define tokens para .dark, pero el front todavía no
+ * implementa el toggle. Dejamos los valores listos para cuando se agregue
+ * (bastaría con aplicar la clase "dark" al <body> y un switch en Configuración).
+ */
+.dark {
+  --color-background: #0a0e13;
+  --color-foreground: #ffffff;
+  --color-card: #1a1f2e;
+  --color-card-foreground: #ffffff;
+  --color-primary: #3b5bdb;
+  --color-secondary: #252b3b;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #334155;
+  --color-muted-foreground: #94a3b8;
+  --color-accent: #252b3b;
+  --color-accent-foreground: #ffffff;
+  --color-border: #334155;
+  --color-input: #1a1f2e;
+  --color-ring: #3b5bdb;
+}

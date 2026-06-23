@@ -1,0 +1,10 @@
+/**
+ * index.css
+ * ---------
+ * Punto de entrada de estilos globales. Solo importa los 3 archivos base;
+ * el resto de los estilos viven junto a cada componente/página (ej.
+ * Dashboard.jsx + Dashboard.css) e importan shared.css cuando lo necesitan.
+ */
+@import './styles/theme.css';
+@import './styles/global.css';
+@import './styles/shared.css';
