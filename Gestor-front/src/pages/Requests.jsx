@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, ArrowLeft, Send, Check, X as XIcon, RotateCcw, Trash2 } from 'lucide-react';
+import { Plus, ArrowLeft, Send, Check, X as XIcon, RotateCcw, Trash2, FileDown } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
 import RequestFormModal from '../components/modals/RequestFormModal';
 import AddQuoteModal from '../components/modals/AddQuoteModal';
+import { downloadQuoteDocx } from '../utils/quoteDocx';
 import { getRequests, getRequestById, createRequest } from '../services/requestsService';
 import {
   getQuotesByRequest,
@@ -109,6 +110,10 @@ export default function Requests() {
     refreshDetail(selected.id);
   }
 
+  async function handleDownloadDocx(quote) {
+    await downloadQuoteDocx(quote, selected);
+  }
+
   const tabCounts = useMemo(() => {
     const counts = { all: requests.length };
     for (const tab of TABS.slice(1)) {
@@ -138,7 +143,7 @@ export default function Requests() {
           <div className="request-header-actions">
             <StatusBadge status={selected.status} type="request" />
             <button type="button" className="btn btn-secondary" onClick={() => setShowAddQuote(true)}>
-              <Plus size={16} /> Agregar cotización de taller
+              <Plus size={16} /> Agregar cotización de proveedor
             </button>
           </div>
         </div>
@@ -149,14 +154,18 @@ export default function Requests() {
               El cliente aceptó la cotización {activeQuote.id} de {activeQuote.supplier}.
             </p>
             <p className="cell-muted">Ya se puede generar la orden de trabajo correspondiente.</p>
-            <button type="button" className="btn btn-primary request-approved-cta" onClick={() => navigate('/ordenes')}>
+            <button
+              type="button"
+              className="btn btn-primary request-approved-cta"
+              onClick={() => navigate('/ordenes', { state: { openQuoteId: activeQuote.id } })}
+            >
               Ir a Órdenes de Trabajo
             </button>
           </div>
         )}
 
         <h2 className="section-title" style={{ marginBottom: '1rem' }}>
-          Cotizaciones por taller
+          Cotizaciones por proveedor
         </h2>
 
         <div className="quote-compare-grid">
@@ -182,14 +191,23 @@ export default function Requests() {
                 <ul className="quote-compare-items">
                   {q.items.map((it, i) => (
                     <li key={i}>
-                      {it.quantity}× {it.description}
+                      {it.quantity}× {it.title || it.description}
                     </li>
                   ))}
                 </ul>
 
                 {q.notes && <p className="cell-muted quote-compare-notes">{q.notes}</p>}
 
+                {q.intermediationFee?.value > 0 && (
+                  <p className="cell-muted" style={{ marginBottom: '0.5rem' }}>
+                    Tarifa de intermediación: ${q.intermediationFee.value.toFixed(2)} ({q.intermediationFee.percent}%)
+                  </p>
+                )}
+
                 <div className="quote-compare-actions">
+                  <button type="button" className="btn btn-secondary" onClick={() => handleDownloadDocx(q)}>
+                    <FileDown size={14} /> Descargar Word
+                  </button>
                   {canSend && (
                     <button type="button" className="btn btn-secondary" onClick={() => handleSend(q.id)}>
                       <Send size={14} /> Enviar al cliente

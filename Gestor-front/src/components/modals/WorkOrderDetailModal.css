@@ -8,16 +8,44 @@
 
 .wo-info-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 }
 
-.wo-list {
-  margin: 0.5rem 0 0;
-  padding-left: 1.25rem;
+.wo-parties-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.wo-parties-grid p {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.35rem;
+}
+
+.wo-quote-items {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+}
+
+.wo-quote-notes {
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.wo-financial-breakdown {
+  margin-top: 0.5rem;
+}
+
+.wo-financial-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  font-size: 0.9rem;
 }
 
 .wo-timeline {
@@ -43,7 +71,8 @@
 }
 
 @media (max-width: 700px) {
-  .wo-info-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .wo-info-grid,
+  .wo-parties-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -56,13 +56,3 @@ export const clientsData = [
     since: '2024-05-10',
   },
 ];
-
-/**
- * Historial de proyectos mostrado en el perfil de un cliente.
- * NOTA: en el diseño original esto es estático (no filtra por cliente);
- * cuando exista el endpoint real debería filtrarse por clientId.
- */
-export const projectHistory = [
-  { id: 'OT-2024-150', description: 'Ensamble de estructuras metálicas', date: '2026-06-15', total: 6300.0 },
-  { id: 'OT-2024-149', description: 'Fabricación de tornillería especial', date: '2026-06-12', total: 11200.0 },
-];

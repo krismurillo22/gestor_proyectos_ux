@@ -10,14 +10,19 @@ import './WorkOrderFormModal.css';
  *
  * Solo se listan cotizaciones aprobadas que todavía no tienen una orden
  * (usedQuoteIds), para no duplicar trabajo.
+ *
+ * initialQuoteId precarga la cotización cuando se llega desde el botón
+ * "Ir a Órdenes de Trabajo" de Solicitudes (ver WorkOrders.jsx).
  */
-export default function WorkOrderFormModal({ usedQuoteIds = [], onClose, onSave }) {
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+export default function WorkOrderFormModal({ usedQuoteIds = [], initialQuoteId = '', onClose, onSave }) {
   const [approvedQuotes, setApprovedQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [quoteId, setQuoteId] = useState('');
+  const [quoteId, setQuoteId] = useState(initialQuoteId);
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState('Media');
+  const [dateError, setDateError] = useState('');
 
   useEffect(() => {
     getQuotes({ estado: 'aprobada' }).then((data) => {
@@ -28,11 +33,21 @@ export default function WorkOrderFormModal({ usedQuoteIds = [], onClose, onSave 
   }, []);
 
   const selectedQuote = approvedQuotes.find((q) => q.id === quoteId);
+  const minDate = todayStr();
+
+  function handleDueDateChange(value) {
+    setDueDate(value);
+    setDateError(value && value < minDate ? 'La fecha límite no puede ser anterior a hoy.' : '');
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!quoteId || !dueDate) return;
-    onSave({ quoteId, description, dueDate, priority });
+    if (dueDate < minDate) {
+      setDateError('La fecha límite no puede ser anterior a hoy.');
+      return;
+    }
+    onSave({ quoteId, description, dueDate });
   }
 
   return (
@@ -103,35 +118,21 @@ export default function WorkOrderFormModal({ usedQuoteIds = [], onClose, onSave 
               />
             </div>
 
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label className="form-label" htmlFor="wo-due-date">
-                  Fecha límite
-                </label>
-                <input
-                  id="wo-due-date"
-                  type="date"
-                  className="form-input"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="wo-priority">
-                  Prioridad
-                </label>
-                <select
-                  id="wo-priority"
-                  className="form-select"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                >
-                  <option value="Alta">Alta</option>
-                  <option value="Media">Media</option>
-                  <option value="Baja">Baja</option>
-                </select>
-              </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="wo-due-date">
+                Fecha límite
+              </label>
+              <input
+                id="wo-due-date"
+                type="date"
+                className="form-input"
+                min={minDate}
+                value={dueDate}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                aria-invalid={Boolean(dateError)}
+                required
+              />
+              {dateError && <p className="form-error-text">{dateError}</p>}
             </div>
           </div>
 
@@ -139,7 +140,7 @@ export default function WorkOrderFormModal({ usedQuoteIds = [], onClose, onSave 
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary" disabled={!quoteId}>
+            <button type="submit" className="btn btn-primary" disabled={!quoteId || Boolean(dateError)}>
               Crear Orden
             </button>
           </div>

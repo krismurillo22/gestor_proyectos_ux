@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, ArrowLeft, Mail, Phone, MapPin, Star } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Mail, Phone, MapPin, Star, Eye } from 'lucide-react';
 import EntityFormModal from '../components/modals/EntityFormModal';
+import WorkOrderDetailModal from '../components/modals/WorkOrderDetailModal';
+import StatusBadge from '../components/StatusBadge';
 import { getClients, createClient, getClientProjectHistory } from '../services/clientsService';
-import { getSuppliers, createSupplier, getSupplierAverageRating } from '../services/suppliersService';
+import { getSuppliers, createSupplier, getSupplierAverageRating, getSupplierProjectHistory } from '../services/suppliersService';
 import './Clients.css';
 
 const TABS = [
@@ -43,8 +45,10 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [supplierRatings, setSupplierRatings] = useState({});
+  const [viewingOrder, setViewingOrder] = useState(null);
 
   useEffect(() => {
     refresh();
@@ -68,7 +72,14 @@ export default function Clients() {
 
   function openProfile(entity) {
     setSelectedEntity(entity);
-    getClientProjectHistory(entity.id).then(setHistory);
+    setHistory([]);
+    setHistoryLoading(true);
+    const isClientEntity = 'totalBilled' in entity;
+    const fetchHistory = isClientEntity ? getClientProjectHistory(entity.id) : getSupplierProjectHistory(entity.id);
+    fetchHistory.then((data) => {
+      setHistory(data);
+      setHistoryLoading(false);
+    });
   }
 
   async function handleCreate(payload) {
@@ -95,7 +106,7 @@ export default function Clients() {
         <div className="page-header" style={{ marginTop: '1rem' }}>
           <div>
             <h1 className="page-title">{selectedEntity.name}</h1>
-            <p className="page-subtitle">Cliente desde {selectedEntity.since}</p>
+            <p className="page-subtitle">{isClient ? 'Cliente' : 'Proveedor'} desde {selectedEntity.since}</p>
           </div>
         </div>
 
@@ -145,29 +156,108 @@ export default function Clients() {
 
         <div className="panel panel-padded" style={{ marginTop: '1rem' }}>
           <h2 className="section-title">Historial de proyectos</h2>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Descripción</th>
-                  <th>Fecha</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((h) => (
-                  <tr key={h.id}>
-                    <td className="cell-strong">{h.id}</td>
-                    <td>{h.description}</td>
-                    <td className="cell-muted">{h.date}</td>
-                    <td className="cell-strong">${h.total.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {historyLoading ? (
+            <p className="muted">Cargando historial…</p>
+          ) : (
+            <div className="table-wrap">
+              {isClient ? (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Orden</th>
+                      <th>Taller</th>
+                      <th>Descripción</th>
+                      <th>Fecha límite</th>
+                      <th>Total</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((order) => (
+                      <tr key={order.id}>
+                        <td className="cell-strong">{order.id}</td>
+                        <td>{order.supplier}</td>
+                        <td>{order.description}</td>
+                        <td className="cell-muted">{order.dueDate}</td>
+                        <td className="cell-strong">{order.total != null ? `$${order.total.toFixed(2)}` : '—'}</td>
+                        <td>
+                          <StatusBadge status={order.status} type="order" />
+                        </td>
+                        <td>
+                          <div className="row-actions">
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              title="Ver detalle"
+                              onClick={() => setViewingOrder(order)}
+                            >
+                              <Eye size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {history.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="empty-state">
+                          Sin proyectos registrados todavía.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Orden</th>
+                      <th>Cliente</th>
+                      <th>Descripción</th>
+                      <th>Fecha límite</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((order) => (
+                      <tr key={order.id}>
+                        <td className="cell-strong">{order.id}</td>
+                        <td>{order.client}</td>
+                        <td>{order.description}</td>
+                        <td className="cell-muted">{order.dueDate}</td>
+                        <td>
+                          <StatusBadge status={order.status} type="order" />
+                        </td>
+                        <td>
+                          <div className="row-actions">
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              title="Ver detalle"
+                              onClick={() => setViewingOrder(order)}
+                            >
+                              <Eye size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {history.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="empty-state">
+                          Sin órdenes de trabajo registradas todavía.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
+
+        {viewingOrder && <WorkOrderDetailModal order={viewingOrder} onClose={() => setViewingOrder(null)} />}
       </div>
     );
   }

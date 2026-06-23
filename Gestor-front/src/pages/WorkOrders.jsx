@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Clock, Factory } from 'lucide-react';
 import { WORK_ORDER_COLUMNS } from '../mocks/workOrders';
 import WorkOrderDetailModal from '../components/modals/WorkOrderDetailModal';
@@ -8,16 +9,31 @@ import { getWorkOrders, createWorkOrder, updateWorkOrderStatus, submitWorkOrderE
 import './WorkOrders.css';
 
 export default function WorkOrders() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [presetQuoteId, setPresetQuoteId] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [evaluatingOrder, setEvaluatingOrder] = useState(null);
 
   useEffect(() => {
     refresh();
   }, []);
+
+  // Permite llegar acá ya con la ventana de "Nueva Orden" abierta y la
+  // cotización aprobada preseleccionada (botón "Ir a Órdenes de Trabajo" en
+  // Solicitudes, justo cuando el cliente acepta una cotización).
+  useEffect(() => {
+    if (location.state?.openQuoteId) {
+      setPresetQuoteId(location.state.openQuoteId);
+      setShowAddModal(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state?.openQuoteId]);
 
   function refresh() {
     setLoading(true);
@@ -100,16 +116,10 @@ export default function WorkOrders() {
                     >
                       <div className="kanban-card-top">
                         <span className="cell-strong">{order.id}</span>
-                        <span className={`badge badge-${order.priority === 'Alta' ? 'red' : order.priority === 'Media' ? 'amber' : 'slate'}`}>
-                          {order.priority}
-                        </span>
+                        {order.quoteTotal != null && <span className="kanban-card-total">${order.quoteTotal.toFixed(2)}</span>}
                       </div>
                       <p className="cell-muted">{order.client}</p>
                       <p className="kanban-card-desc">{order.description}</p>
-
-                      <div className="kanban-progress">
-                        <div className="kanban-progress-bar" style={{ width: `${order.progress}%` }} />
-                      </div>
 
                       <div className="kanban-card-footer">
                         <span className="cell-muted">
@@ -142,7 +152,11 @@ export default function WorkOrders() {
       {showAddModal && (
         <WorkOrderFormModal
           usedQuoteIds={orders.map((o) => o.quoteId)}
-          onClose={() => setShowAddModal(false)}
+          initialQuoteId={presetQuoteId}
+          onClose={() => {
+            setShowAddModal(false);
+            setPresetQuoteId(null);
+          }}
           onSave={handleCreate}
         />
       )}

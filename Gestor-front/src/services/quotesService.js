@@ -1,3 +1,11 @@
+/**
+ * NOTA PARA QUIEN CONECTE EL BACKEND:
+ * Cada función abajo tiene un bloque "ENDPOINT REAL" con método, ruta,
+ * query/body y la forma de la respuesta esperada, además de una línea
+ * `apiClient...` ya escrita (comentada) lista para descomentar.
+ * Guía paso a paso con un ejemplo completo: ver GUIA_CONEXION_BACKEND.md
+ * en esta misma carpeta.
+ */
 // eslint-disable-next-line no-unused-vars -- queda listo para cuando se conecte el backend real (ver llamadas comentadas abajo)
 import { apiClient } from './apiClient';
 import { simulateNetwork } from './mockUtils';
@@ -17,6 +25,9 @@ function withClient(quote) {
  * Etiqueta de estado a mostrar para una cotización individual (usada por
  * <StatusBadge type="quote" />). No es lo mismo que `estado` (el del
  * backend) porque también refleja las banderas de front sentToClient/discarded.
+ *
+ * Es un helper puro (no llama a nada, ni mock ni real) — no tiene endpoint
+ * propio, no hay nada que conectar aquí.
  */
 export function getQuoteDisplayStatus(quote) {
   if (quote.discarded) return 'Descartada';
@@ -30,6 +41,11 @@ export function getQuoteDisplayStatus(quote) {
  * Acceso síncrono a las cotizaciones de una solicitud, usado internamente
  * por requestsService para derivar el estado de la solicitud sin tener que
  * encadenar promesas. No simula latencia porque no es una llamada "real".
+ *
+ * No tiene endpoint propio: cuando se conecte el backend, esta función
+ * sigue siendo síncrona y sigue leyendo del arreglo en memoria `mockQuotes`
+ * (no se vuelve una llamada HTTP). Si requestsService necesitara datos
+ * frescos del backend en algún punto, eso se resolvería ahí, no aquí.
  */
 export function getQuotesByRequestSync(requestId) {
   return mockQuotes.filter((q) => q.requestId === requestId);
@@ -38,9 +54,17 @@ export function getQuotesByRequestSync(requestId) {
 /**
  * Lista las cotizaciones (vista global, todas las solicitudes).
  *
- * Endpoint real: GET /api/cotizaciones
- * Query params sugeridos: ?estado=pendiente&requestId=SOL-2024-041&supplierId=PRV-001&page=1&pageSize=20
- * Respuesta esperada: { data: Quote[], total: number }
+ * ENDPOINT REAL
+ * -------------
+ * Método:    GET
+ * Ruta:      /api/cotizaciones
+ * Query:     ?estado=  (opcional: pendiente|aprobada|rechazada)
+ *            &requestId=  (opcional) &supplierId=  (opcional)
+ *            &page=  &pageSize=  (paginación, opcional)
+ * Body:      (no aplica)
+ * Respuesta: { data: Cotizacion[], total: number }
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
  *
  * @param {{ estado?: string, requestId?: string, supplierId?: string }} [filters]
  */
@@ -57,8 +81,19 @@ export async function getQuotes(filters = {}) {
  * Cotizaciones de una sola solicitud, para la vista de comparación
  * (cuántos talleres cotizaron, cuál se mandó al cliente, etc).
  *
- * Endpoint real: GET /api/solicitudes/:id/cotizaciones (o filtrar
- * GET /api/cotizaciones?requestId=)
+ * ENDPOINT REAL
+ * -------------
+ * Método:    GET
+ * Ruta:      /api/solicitudes/:id/cotizaciones
+ *            (alternativa: GET /api/cotizaciones?requestId=:id — decidir
+ *            cuál de las dos expone el backend)
+ * Query:     (no aplica si se usa la ruta de arriba)
+ * Body:      (no aplica)
+ * Respuesta: Cotizacion[]
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {string} requestId
  */
 export async function getQuotesByRequest(requestId) {
   return simulateNetwork(getQuotesByRequestSync(requestId).map(withClient));
@@ -68,7 +103,15 @@ export async function getQuotesByRequest(requestId) {
 /**
  * Obtiene el detalle de una cotización por id.
  *
- * Endpoint real: GET /api/cotizaciones/:id
+ * ENDPOINT REAL
+ * -------------
+ * Método:    GET
+ * Ruta:      /api/cotizaciones/:id
+ * Query:     (no aplica)
+ * Body:      (no aplica)
+ * Respuesta: Cotizacion → ver el shape completo documentado en createQuote más abajo
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
  *
  * @param {string} id
  */
@@ -81,11 +124,28 @@ export async function getQuoteById(id) {
 /**
  * Registra la cotización de un taller para una solicitud existente.
  *
- * Endpoint real: POST /api/cotizaciones
- * Body esperado: { id_solicitud, id_proveedor, total, descripcion,
- *                  detalles: {nombre, valor, cantidad, descripcion}[] }
+ * ENDPOINT REAL
+ * -------------
+ * Método:    POST
+ * Ruta:      /api/cotizaciones
+ * Query:     (no aplica)
+ * Body:      {
+ *              id_solicitud, id_proveedor,
+ *              items: [{ titulo, descripcion, cantidad, precio_unitario }],
+ *              notas,
+ *              tarifa_intermediacion: { valor, porcentaje },
+ *              subtotal, isv, total
+ *            }
+ * Respuesta: Cotizacion → la cotización recién creada, con su id real
  *
- * @param {{ requestId: string, supplierId: string, supplier: string, items: object[], notes?: string }} payload
+ * NOTA: subtotal/isv/total los calcula hoy el front (ver AddQuoteModal.jsx)
+ * y se mandan ya calculados — pendiente decidir si el backend los recalcula
+ * y valida o confía en lo que manda el front (ver "Pendiente de decidir"
+ * en ENDPOINTS_CHECKLIST.md).
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {{ requestId: string, supplierId: string, supplier: string, items: object[], notes?: string, intermediationFee?: { value: number, percent: number }, subtotal?: number, tax?: number }} payload
  */
 export async function createQuote(payload) {
   const newQuote = {
@@ -105,7 +165,15 @@ export async function createQuote(payload) {
 /**
  * Actualiza una cotización existente (líneas, notas o total).
  *
- * Endpoint real: PUT /api/cotizaciones/:id
+ * ENDPOINT REAL
+ * -------------
+ * Método:    PUT
+ * Ruta:      /api/cotizaciones/:id
+ * Query:     (no aplica)
+ * Body:      mismo shape que el POST de createQuote, con los campos a cambiar
+ * Respuesta: Cotizacion → ya actualizada
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
  *
  * @param {string} id
  * @param {object} payload
@@ -123,9 +191,21 @@ export async function updateQuote(id, payload) {
  * así que se desmarca cualquier otra que lo estuviera (p. ej. si antes se
  * mandó la de un taller, lo rechazaron, y ahora se manda la de otro).
  *
- * NOTA: `sentToClient`/`discarded` son banderas solo de front (ver mocks/quotes.js).
- * Hoy no hay endpoint para esto en el backend — habría que agregar algo como
- * PATCH /api/cotizaciones/:id/enviar-a-cliente cuando se conecte de verdad.
+ * NOTA: `sentToClient`/`discarded` son banderas solo de front (ver
+ * mocks/quotes.js). Hoy no existen en el modelo Cotizacion del backend —
+ * habría que agregar algo equivalente cuando se conecte de verdad.
+ *
+ * ENDPOINT REAL
+ * -------------
+ * Método:    PATCH
+ * Ruta:      /api/cotizaciones/:id/enviar-a-cliente
+ * Query:     (no aplica)
+ * Body:      (no aplica, la acción la indica la ruta)
+ * Respuesta: Cotizacion → ya marcada como enviada
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {string} id
  */
 export async function sendQuoteToClient(id) {
   const target = mockQuotes.find((q) => q.id === id);
@@ -137,12 +217,23 @@ export async function sendQuoteToClient(id) {
   });
   const updated = mockQuotes.find((q) => q.id === id);
   return simulateNetwork(withClient(updated));
+  // return apiClient.patch(`/cotizaciones/${id}/enviar-a-cliente`); // TODO: backend
 }
 
 /**
  * El cliente acepta la cotización que se le mandó.
  *
- * Endpoint real: PUT /api/cotizaciones/:id/aprobar
+ * ENDPOINT REAL
+ * -------------
+ * Método:    PUT
+ * Ruta:      /api/cotizaciones/:id/aprobar
+ * Query:     (no aplica)
+ * Body:      (no aplica)
+ * Respuesta: Cotizacion → con estado 'aprobada'
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {string} id
  */
 export async function approveQuote(id) {
   return updateQuote(id, { estado: 'aprobada' });
@@ -152,7 +243,17 @@ export async function approveQuote(id) {
 /**
  * El cliente rechaza la cotización que se le mandó.
  *
- * Endpoint real: PUT /api/cotizaciones/:id/rechazar
+ * ENDPOINT REAL
+ * -------------
+ * Método:    PUT
+ * Ruta:      /api/cotizaciones/:id/rechazar
+ * Query:     (no aplica)
+ * Body:      (no aplica)
+ * Respuesta: Cotizacion → con estado 'rechazada'
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {string} id
  */
 export async function rejectQuote(id) {
   return updateQuote(id, { estado: 'rechazada' });
@@ -162,12 +263,20 @@ export async function rejectQuote(id) {
 /**
  * Descarta manualmente la cotización de un taller (p. ej. perdió la
  * comparación contra otro). Solo aplica mientras no se haya mandado al cliente.
+ *
+ * No necesita su propio endpoint: reusa el PUT genérico de updateQuote
+ * (arriba) solo para cambiar la bandera `discarded`. No hay nada que
+ * conectar aparte de lo que ya se conecta en updateQuote.
  */
 export async function discardQuote(id) {
   return updateQuote(id, { discarded: true });
 }
 
-/** Revierte el descarte de una cotización, para volverla a considerar. */
+/**
+ * Revierte el descarte de una cotización, para volverla a considerar.
+ *
+ * Igual que discardQuote, reusa updateQuote — no tiene endpoint propio.
+ */
 export async function restoreQuote(id) {
   return updateQuote(id, { discarded: false });
 }

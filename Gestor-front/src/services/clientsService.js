@@ -1,15 +1,35 @@
+/**
+ * NOTA PARA QUIEN CONECTE EL BACKEND:
+ * Cada función abajo tiene un bloque "ENDPOINT REAL" con método, ruta,
+ * query/body y la forma de la respuesta esperada, además de una línea
+ * `apiClient...` ya escrita (comentada) lista para descomentar.
+ * Guía paso a paso con un ejemplo completo: ver GUIA_CONEXION_BACKEND.md
+ * en esta misma carpeta.
+ */
 // eslint-disable-next-line no-unused-vars -- queda listo para cuando se conecte el backend real (ver llamadas comentadas abajo)
 import { apiClient } from './apiClient';
 import { simulateNetwork } from './mockUtils';
-import { clientsData, projectHistory } from '../mocks/clients';
+import { clientsData } from '../mocks/clients';
+import { quotesData } from '../mocks/quotes';
+import { getWorkOrders } from './workOrdersService';
 
 let mockClients = [...clientsData];
 
 /**
  * Lista los clientes (empresas que solicitan cotizaciones).
  *
- * Endpoint real: GET /api/clientes
- * Query params sugeridos: ?search=
+ * ENDPOINT REAL
+ * -------------
+ * Método:    GET
+ * Ruta:      /api/clientes
+ * Query:     ?search=  (opcional, filtra por nombre)
+ * Body:      (no aplica)
+ * Respuesta: Cliente[] → { id, name, rtn, contact, email, phone, address,
+ *            totalBilled, activeProjects, totalQuotes, since }
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {string} [search]
  */
 export async function getClients(search = '') {
   const filtered = search
@@ -22,7 +42,17 @@ export async function getClients(search = '') {
 /**
  * Obtiene el detalle de un cliente (vista de perfil con drill-in).
  *
- * Endpoint real: GET /api/clientes/:id
+ * ENDPOINT REAL
+ * -------------
+ * Método:    GET
+ * Ruta:      /api/clientes/:id
+ * Query:     (no aplica)
+ * Body:      (no aplica)
+ * Respuesta: Cliente → mismo shape que en getClients, un solo objeto
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {string} id
  */
 export async function getClientById(id) {
   const client = mockClients.find((c) => c.id === id) || null;
@@ -31,24 +61,62 @@ export async function getClientById(id) {
 }
 
 /**
- * Historial de proyectos/órdenes de un cliente, mostrado en su perfil.
+ * Historial de órdenes de trabajo (proyectos) de este cliente, mostrado en
+ * su perfil ("Historial de proyectos"). Se apoya en workOrdersService
+ * (mantiene el estado mutable real de las órdenes, igual que
+ * getSupplierProjectHistory en suppliersService) y filtra por nombre de
+ * cliente: la Orden de Trabajo todavía no guarda un clientId propio, solo
+ * el nombre del cliente heredado de la cotización al crearla (ver
+ * workOrdersService.createWorkOrder), así que no se puede filtrar por id
+ * todavía. El total de cada proyecto se toma de su cotización asociada
+ * (quoteId), porque la orden en sí no tiene precio.
  *
- * Endpoint real: GET /api/clientes/:id/historial
- * NOTA: hoy es un mock estático compartido por todos los clientes;
- * cuando el backend exista debe filtrar por clientId.
+ * ENDPOINT REAL
+ * -------------
+ * Método:    GET
+ * Ruta:      /api/clientes/:id/historial
+ * Query:     (no aplica)
+ * Body:      (no aplica)
+ * Respuesta: OrdenDeTrabajo[] → cada orden con su `total` (de la cotización
+ *            asociada) ya incluido, para no tener que pedirlo aparte
+ * Alternativa: GET /api/ordenes-trabajo?clientId=:id, una vez que el
+ *            backend agregue ese campo a la Orden de Trabajo — decidir
+ *            cuál de las dos expone el backend.
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {string} clientId
  */
-// eslint-disable-next-line no-unused-vars -- "id" no se usa todavía porque el mock no filtra por cliente (ver nota arriba)
-export async function getClientProjectHistory(id) {
-  return simulateNetwork(projectHistory);
-  // return apiClient.get(`/clientes/${id}/historial`); // TODO: backend
+export async function getClientProjectHistory(clientId) {
+  const client = mockClients.find((c) => c.id === clientId);
+  if (!client) return simulateNetwork([]);
+
+  const orders = await getWorkOrders();
+  const ownOrders = orders
+    .filter((o) => o.client === client.name)
+    .map((o) => ({ ...o, total: quotesData.find((q) => q.id === o.quoteId)?.total ?? null }));
+
+  return ownOrders.sort((a, b) => (a.dueDate < b.dueDate ? 1 : -1));
+  // return apiClient.get(`/clientes/${clientId}/historial`); // TODO: backend
 }
 
 /**
  * Crea un nuevo cliente.
  *
- * Endpoint real: POST /api/clientes
- * Body esperado: { name, rtn, contact, email, phone, address } — el modelo
- * Cliente del backend hoy solo tiene nombre/rtn/activo (ver EntityFormModal.jsx).
+ * ENDPOINT REAL
+ * -------------
+ * Método:    POST
+ * Ruta:      /api/clientes
+ * Query:     (no aplica)
+ * Body:      { name, rtn, contact, email, phone, address } — el modelo
+ *            Cliente del backend hoy solo tiene nombre/rtn/activo (ver
+ *            EntityFormModal.jsx); el resto de campos son solo del front
+ *            por ahora.
+ * Respuesta: Cliente → el cliente recién creado, con su id real
+ *
+ * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
+ *
+ * @param {object} payload
  */
 export async function createClient(payload) {
   const newClient = {

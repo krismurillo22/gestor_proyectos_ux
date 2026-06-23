@@ -80,10 +80,11 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
                       <td>
                         <input
                           type="number"
-                          min="0"
+                          min="1"
+                          step="1"
                           className="form-input"
                           value={item.quantity}
-                          onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
+                          onChange={(e) => updateItem(index, 'quantity', Math.round(Number(e.target.value) || 0))}
                         />
                       </td>
                       <td>
