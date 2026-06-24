@@ -103,7 +103,7 @@ const getProyectosProximosVencer = async (req, res) => {
 
         const proyectos = await Proyecto.findAll({
             where: {
-                estado: 'en_progreso',
+                estado: { [Op.in]: ['pendiente', 'en_progreso'] },
                 fecha_vencimiento: { [Op.gte]: hoy, [Op.lte]: limite },
             },
             include: [

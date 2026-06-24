@@ -69,6 +69,16 @@ module.exports = (sequelize) => {
         defaultValue: false,
       },
       // Permite "descartar" una cotización en la vista de comparación sin borrarla.
+      tarifa_intermediacion: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        defaultValue: 0,
+      },
+      tarifa_porcentaje: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true,
+        defaultValue: 0,
+      },
       descartada: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

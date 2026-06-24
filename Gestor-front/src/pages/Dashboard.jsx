@@ -33,11 +33,19 @@ export default function Dashboard() {
     refresh();
   }, []);
 
+  const MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  function formatMonth(yyyymm) {
+    if (!yyyymm) return yyyymm;
+    const [year, month] = yyyymm.split('-');
+    return `${MESES_CORTO[Number(month) - 1]} ${year}`;
+  }
+
   function refresh() {
     Promise.all([getKpis(), getChartData(), getProjectsNearDeadline()]).then(
       ([kpiRes, chartRes, deadlineRes]) => {
         setKpis(kpiRes);
-        setChartData(chartRes);
+        setChartData(chartRes.map((d) => ({ ...d, month: formatMonth(d.month) })));
         setDeadlines(deadlineRes);
         setLoading(false);
       }
@@ -75,7 +83,7 @@ export default function Dashboard() {
         {kpis.map((kpi) => {
           const Icon = KPI_ICONS[kpi.id] || ClipboardList;
           return (
-            <div key={kpi.id} className="panel panel-padded kpi-card">
+            <div key={kpi.id} className={`panel panel-padded kpi-card kpi-card-${kpi.color}`}>
               <div className="kpi-card-top">
                 <span className="kpi-label">{kpi.label}</span>
                 <span className={`kpi-icon kpi-icon-${kpi.color}`}>
@@ -83,7 +91,6 @@ export default function Dashboard() {
                 </span>
               </div>
               <p className="kpi-value">{kpi.value}</p>
-              <p className="kpi-change">{kpi.change}</p>
             </div>
           );
         })}

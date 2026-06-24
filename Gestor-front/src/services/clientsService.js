@@ -126,6 +126,18 @@ export async function getClientProjectHistory(clientId) {
  *
  * @param {{ name: string, rtn: string, contact?: string, email?: string, phone?: string, address?: string }} payload
  */
+export async function updateClient(id, payload) {
+  const { data } = await apiClient.patch(`/clientes/${id}`, {
+    nombre: payload.name,
+    rtn: payload.rtn,
+    contacto: payload.contact,
+    correo: payload.email,
+    telefono: payload.phone,
+    direccion: payload.address,
+  });
+  return adaptCliente(data);
+}
+
 export async function createClient(payload) {
   const { data } = await apiClient.post('/clientes', {
     nombre: payload.name,

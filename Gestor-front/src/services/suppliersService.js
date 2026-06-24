@@ -90,6 +90,18 @@ export async function getSupplierById(id) {
  *
  * @param {{ name: string, rtn: string, contact?: string, email?: string, phone?: string, address?: string }} payload
  */
+export async function updateSupplier(id, payload) {
+  const { data } = await apiClient.put(`/proveedores/${id}`, {
+    nombre: payload.name,
+    rtn: payload.rtn,
+    contacto: payload.contact,
+    correo: payload.email,
+    telefono: payload.phone,
+    direccion: payload.address,
+  });
+  return adaptProveedor(data);
+}
+
 export async function createSupplier(payload) {
   const { data } = await apiClient.post('/proveedores', {
     nombre: payload.name,

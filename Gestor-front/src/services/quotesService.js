@@ -48,6 +48,10 @@ function adaptQuote(c) {
     estado: c.estado,
     sentToClient: Boolean(c.enviada_cliente),
     discarded: Boolean(c.descartada),
+    intermediationFee: {
+      value: Number(c.tarifa_intermediacion || 0),
+      percent: Number(c.tarifa_porcentaje || 0),
+    },
     notes: c.descripcion || '',
     items: (c.detalles || []).map((d) => ({
       title: d.nombre,
@@ -146,6 +150,8 @@ export async function createQuote(payload) {
     total: payload.total,
     estado: 'pendiente',
     descripcion: payload.notes,
+    tarifa_intermediacion: payload.intermediationFee?.value ?? 0,
+    tarifa_porcentaje: payload.intermediationFee?.percent ?? 0,
     detalles: buildDetalles(payload.items),
   });
   return adaptQuote(cotizacion);
@@ -168,6 +174,7 @@ export async function updateQuote(id, payload) {
   if (payload.estado !== undefined) body.estado = payload.estado;
   if (payload.notes !== undefined) body.descripcion = payload.notes;
   if (payload.discarded !== undefined) body.descartada = payload.discarded;
+  if (payload.sentToClient !== undefined) body.enviada_cliente = payload.sentToClient;
   if (payload.items !== undefined) body.detalles = buildDetalles(payload.items);
 
   const { cotizacion } = await apiClient.put(`/cotizaciones/${id}`, body);

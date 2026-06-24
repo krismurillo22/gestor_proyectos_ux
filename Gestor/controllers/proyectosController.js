@@ -51,7 +51,7 @@ const isPositiveInteger = (v) => {
 const getProyectos = async (req, res) => {
     try {
         const { estado, id_cliente, id_proveedor } = req.query;
-        const where = {};
+        const where = { archivado: false };  // nunca mostrar archivados en el kanban
 
         if (estado) {
             if (!estadosValidos.includes(estado)) {
@@ -507,10 +507,59 @@ const updateProyecto = async(req,res) => {
     }
 };
 
+// PATCH /api/proyectos/:id/archivar
+const archivarProyecto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isPositiveInteger(id)) return res.status(400).json({ error: 'ID inválido' });
+        const proyecto = await Proyecto.findOne({ where: { id_proyecto: id } });
+        if (!proyecto) return res.status(404).json({ error: 'Proyecto no encontrado' });
+        if (proyecto.estado !== 'completado') {
+            return res.status(409).json({ error: 'Solo se pueden archivar órdenes completadas' });
+        }
+        await proyecto.update({ archivado: true });
+        res.json({ message: 'Orden archivada exitosamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// PATCH /api/proyectos/:id/desarchivar
+const desarchivarProyecto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isPositiveInteger(id)) return res.status(400).json({ error: 'ID inválido' });
+        const proyecto = await Proyecto.findOne({ where: { id_proyecto: id, archivado: true } });
+        if (!proyecto) return res.status(404).json({ error: 'Proyecto no encontrado o no está archivado' });
+        await proyecto.update({ archivado: false });
+        res.json({ message: 'Orden desarchivada exitosamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// GET /api/proyectos/archivados
+const getProyectosArchivados = async (req, res) => {
+    try {
+        const includes = buildProyectoIncludes();
+        const proyectos = await Proyecto.findAll({
+            where: { archivado: true },
+            include: includes,
+            order: [['updatedAt', 'DESC']],
+        });
+        res.json(proyectos);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getProyectos,
     getProyectoById,
     updateProyectoEstado,
+    archivarProyecto,
+    desarchivarProyecto,
+    getProyectosArchivados,
     desactivarProyecto,
     createProyecto,
     filtrarProyecto,

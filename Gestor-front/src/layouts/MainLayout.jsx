@@ -6,6 +6,7 @@ import {
   FileText,
   ClipboardList,
   Users,
+  BarChart2,
   Settings,
   Menu,
   X,
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { path: '/cotizaciones', icon: FileText, label: 'Cotizaciones' },
   { path: '/ordenes', icon: ClipboardList, label: 'Órdenes de Trabajo' },
   { path: '/clientes', icon: Users, label: 'Clientes y Proveedores' },
+  { path: '/reportes', icon: BarChart2, label: 'Reportes' },
   { path: '/configuracion', icon: Settings, label: 'Configuración' },
 ];
 

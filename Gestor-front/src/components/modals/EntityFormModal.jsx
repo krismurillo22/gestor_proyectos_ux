@@ -34,13 +34,14 @@ function formatRtn(rawValue) {
   return parts.filter(Boolean).join('-');
 }
 
-export default function EntityFormModal({ kind, onClose, onSave }) {
-  const [name, setName] = useState('');
-  const [rtn, setRtn] = useState('');
-  const [contact, setContact] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+export default function EntityFormModal({ kind, onClose, onSave, entity }) {
+  const isEditing = Boolean(entity);
+  const [name, setName] = useState(entity?.name ?? '');
+  const [rtn, setRtn] = useState(entity?.rtn ?? '');
+  const [contact, setContact] = useState(entity?.contact ?? '');
+  const [email, setEmail] = useState(entity?.email ?? '');
+  const [phone, setPhone] = useState(entity?.phone ?? '');
+  const [address, setAddress] = useState(entity?.address ?? '');
   const [errors, setErrors] = useState({});
 
   const values = { name, rtn, contact, email, phone, address };
@@ -83,7 +84,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
             <span className="modal-icon">
               <Building2 size={18} />
             </span>
-            <h2 className="page-title">{kind === 'cliente' ? 'Nuevo Cliente' : 'Nuevo Proveedor'}</h2>
+            <h2 className="page-title">{isEditing ? (kind === 'cliente' ? 'Editar Cliente' : 'Editar Proveedor') : (kind === 'cliente' ? 'Nuevo Cliente' : 'Nuevo Proveedor')}</h2>
           </div>
           <button type="button" className="btn-icon" onClick={onClose}>
             <X size={18} />
@@ -207,7 +208,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary">
-              Guardar
+              {isEditing ? 'Guardar cambios' : 'Guardar'}
             </button>
           </div>
         </form>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, FileText, Trash2, Plus } from 'lucide-react';
 import './QuoteFormModal.css';
 
-const emptyItem = () => ({ description: '', quantity: 1, unitPrice: 0 });
+const emptyItem = () => ({ description: '', quantity: 1, unitPrice: '' });
 
 /**
  * Modal para editar las líneas/notas de una cotización ya registrada
@@ -84,7 +84,7 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
                           step="1"
                           className="form-input"
                           value={item.quantity}
-                          onChange={(e) => updateItem(index, 'quantity', Math.round(Number(e.target.value) || 0))}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? '' : Math.round(Number(e.target.value) || 0))}
                         />
                       </td>
                       <td>
@@ -94,7 +94,7 @@ export default function QuoteFormModal({ quote, onClose, onSave }) {
                           step="0.01"
                           className="form-input"
                           value={item.unitPrice}
-                          onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value))}
+                          onChange={(e) => updateItem(index, 'unitPrice', e.target.value === '' ? '' : e.target.value)}
                         />
                       </td>
                       <td className="cell-strong">

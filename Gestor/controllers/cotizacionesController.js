@@ -43,7 +43,9 @@ async function crearCotizacion(req, res) {
       id_solicitud,
       id_proveedor,
       total,
-      estado
+      estado,
+      tarifa_intermediacion: req.body.tarifa_intermediacion ?? 0,
+      tarifa_porcentaje: req.body.tarifa_porcentaje ?? 0,
     });
 
     // Crear detalles asociados
@@ -211,7 +213,7 @@ async function enviarACliente(req, res) {
 async function modificarCotizacion(req, res) {
   try {
     const { id } = req.params;
-    const { id_solicitud, id_proveedor, total, estado, detalles, descartada } = req.body;
+    const { id_solicitud, id_proveedor, total, estado, detalles, descartada, enviada_cliente } = req.body;
 
     if (!id) return res.status(400).json({ ok: false, msg: 'ID de cotización requerido.' });
 
@@ -224,6 +226,9 @@ async function modificarCotizacion(req, res) {
     if (total !== undefined) cotizacion.total = total;
     if (estado !== undefined) cotizacion.estado = estado;
     if (descartada !== undefined) cotizacion.descartada = descartada;
+    if (enviada_cliente !== undefined) cotizacion.enviada_cliente = enviada_cliente;
+    if (req.body.tarifa_intermediacion !== undefined) cotizacion.tarifa_intermediacion = req.body.tarifa_intermediacion;
+    if (req.body.tarifa_porcentaje !== undefined) cotizacion.tarifa_porcentaje = req.body.tarifa_porcentaje;
 
     await cotizacion.save();
 

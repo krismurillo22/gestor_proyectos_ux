@@ -1,6 +1,6 @@
 'use strict';
 
-const { Solicitud, Cliente, Cotizacion, DetalleCotizacion } = require('../models');
+const { Solicitud, Cliente, Cotizacion, DetalleCotizacion, Proveedor } = require('../models');
 const { Op } = require('sequelize');
 
 // GET /api/solicitudes
@@ -94,7 +94,10 @@ const getCotizacionesBySolicitud = async (req, res) => {
 
     const cotizaciones = await Cotizacion.findAll({
       where: { id_solicitud: id },
-      include: [{ model: DetalleCotizacion, as: 'detalles' }],
+      include: [
+        { model: DetalleCotizacion, as: 'detalles' },
+        { model: Proveedor, as: 'proveedor' },
+      ],
       order: [['createdAt', 'DESC']],
     });
 

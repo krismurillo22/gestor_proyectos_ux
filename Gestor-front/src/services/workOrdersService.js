@@ -166,3 +166,16 @@ export async function submitWorkOrderEvaluation(id, { rating, notes }) {
   await apiClient.patch(`/proyectos/${id}/estado`, { estado: 'completado' });
   return getWorkOrderById(id);
 }
+
+export async function archiveWorkOrder(id) {
+  await apiClient.patch(`/proyectos/${id}/archivar`);
+}
+
+export async function unarchiveWorkOrder(id) {
+  await apiClient.patch(`/proyectos/${id}/desarchivar`);
+}
+
+export async function getArchivedWorkOrders() {
+  const proyectos = await apiClient.get('/proyectos/archivados');
+  return Array.isArray(proyectos) ? proyectos.map(adaptProyecto) : [];
+}

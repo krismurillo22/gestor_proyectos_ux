@@ -14,6 +14,7 @@ import {
   rejectQuote,
   discardQuote,
   restoreQuote,
+  updateQuote,
   getQuoteDisplayStatus,
 } from '../services/quotesService';
 import './Requests.css';
@@ -37,6 +38,7 @@ export default function Requests() {
   const [selected, setSelected] = useState(null);
   const [quotes, setQuotes] = useState([]);
   const [showAddQuote, setShowAddQuote] = useState(false);
+  const [viewingQuote, setViewingQuote] = useState(null);
 
   useEffect(() => {
     refresh();
@@ -86,17 +88,28 @@ export default function Requests() {
   }
 
   async function handleSend(quoteId) {
-    await sendQuoteToClient(quoteId);
+    const updated = await sendQuoteToClient(quoteId);
+    setQuotes((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
     refreshDetail(selected.id);
   }
 
   async function handleApprove(quoteId) {
-    await approveQuote(quoteId);
+    const updated = await approveQuote(quoteId);
+    setQuotes((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
     refreshDetail(selected.id);
   }
 
   async function handleReject(quoteId) {
-    await rejectQuote(quoteId);
+    const updated = await rejectQuote(quoteId);
+    setQuotes((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
+    refreshDetail(selected.id);
+  }
+
+  async function handleUnsend(quoteId) {
+    // Revierte el envío al cliente: quita la bandera enviada_cliente y
+    // regresa el estado a 'pendiente' para poder volver a elegir.
+    const updated = await updateQuote(quoteId, { sentToClient: false, estado: 'pendiente' });
+    setQuotes((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
     refreshDetail(selected.id);
   }
 
@@ -135,7 +148,7 @@ export default function Requests() {
 
         <div className="page-header" style={{ marginTop: '1rem' }}>
           <div>
-            <h1 className="page-title">{selected.id}</h1>
+            <p className="cell-muted" style={{ fontSize: "0.85rem", marginBottom: "0.25rem" }}>Solicitud #{selected.id}</p>
             <p className="page-subtitle">
               {selected.client} — {selected.description}
             </p>
@@ -151,7 +164,7 @@ export default function Requests() {
         {selected.status === 'Aprobada' && activeQuote && (
           <div className="panel panel-padded request-approved-banner">
             <p className="cell-strong">
-              El cliente aceptó la cotización {activeQuote.id} de {activeQuote.supplier}.
+              El cliente aceptó la cotización #{activeQuote.id}{activeQuote.supplier ? ` — ${activeQuote.supplier}` : ""}.
             </p>
             <p className="cell-muted">Ya se puede generar la orden de trabajo correspondiente.</p>
             <button
@@ -178,6 +191,8 @@ export default function Requests() {
               <div
                 key={q.id}
                 className={`panel panel-padded quote-compare-card ${isActive ? 'quote-compare-card-active' : ''} ${q.discarded ? 'quote-compare-card-discarded' : ''}`}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setViewingQuote(q)}
               >
                 <div className="quote-compare-header">
                   <h3 className="cell-strong">{q.supplier}</h3>
@@ -204,7 +219,7 @@ export default function Requests() {
                   </p>
                 )}
 
-                <div className="quote-compare-actions">
+                <div className="quote-compare-actions" onClick={(e) => e.stopPropagation()}>
                   <button type="button" className="btn btn-secondary" onClick={() => handleDownloadDocx(q)}>
                     <FileDown size={14} /> Descargar Word
                   </button>
@@ -221,7 +236,15 @@ export default function Requests() {
                       <button type="button" className="btn btn-secondary" onClick={() => handleReject(q.id)}>
                         <XIcon size={14} /> Cliente rechazó
                       </button>
+                      <button type="button" className="btn btn-secondary" onClick={() => handleUnsend(q.id)}>
+                        <RotateCcw size={14} /> Cancelar envío
+                      </button>
                     </>
+                  )}
+                  {isActive && q.estado === 'rechazada' && (
+                    <button type="button" className="btn btn-secondary" onClick={() => handleUnsend(q.id)}>
+                      <RotateCcw size={14} /> Reabrir cotización
+                    </button>
                   )}
                   {!isActive && !q.discarded && selected.status !== 'Aprobada' && (
                     <button type="button" className="btn-icon" title="Descartar esta cotización" onClick={() => handleDiscard(q.id)}>
@@ -244,6 +267,69 @@ export default function Requests() {
         </div>
 
         {showAddQuote && <AddQuoteModal onClose={() => setShowAddQuote(false)} onSave={handleAddQuote} />}
+
+      {viewingQuote && (
+        <div className="modal-overlay" onClick={() => setViewingQuote(null)}>
+          <div className="modal-card modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-row">
+                <h2 className="page-title">Cotización {viewingQuote.id}</h2>
+              </div>
+              <button type="button" className="btn-icon" onClick={() => setViewingQuote(null)}>
+                <XIcon size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
+                <div><p className="cell-muted">Proveedor</p><p className="cell-strong">{viewingQuote.supplier}</p></div>
+                <div><p className="cell-muted">Fecha</p><p className="cell-strong">{viewingQuote.date}</p></div>
+                <div><p className="cell-muted">Estado</p><StatusBadge status={getQuoteDisplayStatus(viewingQuote)} type="quote" /></div>
+              </div>
+
+              <table className="table" style={{ marginBottom: '1rem' }}>
+                <thead>
+                  <tr><th>Descripción</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr>
+                </thead>
+                <tbody>
+                  {viewingQuote.items.map((it, i) => (
+                    <tr key={i}>
+                      <td><span className="cell-strong">{it.title}</span>{it.description && <><br /><span className="cell-muted">{it.description}</span></>}</td>
+                      <td>{it.quantity}</td>
+                      <td>${it.unitPrice.toFixed(2)}</td>
+                      <td className="cell-strong">${(it.quantity * it.unitPrice).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {viewingQuote.items.length === 0 && (
+                    <tr><td colSpan={4} className="empty-state">Sin líneas de detalle.</td></tr>
+                  )}
+                </tbody>
+              </table>
+
+              {viewingQuote.notes && (
+                <p className="cell-muted" style={{ fontStyle: 'italic', marginBottom: '1rem' }}>{viewingQuote.notes}</p>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.35rem' }}>
+                {(() => {
+                  const sub = viewingQuote.items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+                  const fee = viewingQuote.intermediationFee?.value ?? 0;
+                  const tax = (sub + fee) * 0.15;
+                  const total = sub + fee + tax;
+                  return (<>
+                    <span className="cell-muted">Subtotal: <strong>${sub.toFixed(2)}</strong></span>
+                    {fee > 0 && <span className="cell-muted">Tarifa de intermediación: <strong>${fee.toFixed(2)}</strong></span>}
+                    <span className="cell-muted">ISV (15%): <strong>${tax.toFixed(2)}</strong></span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Total: ${total.toFixed(2)}</span>
+                  </>);
+                })()}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setViewingQuote(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     );
   }

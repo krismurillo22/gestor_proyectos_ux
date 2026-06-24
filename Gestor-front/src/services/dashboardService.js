@@ -59,7 +59,7 @@ export async function getChartData(months = 6) {
  *
  * @param {number} [daysAhead] umbral de días (default 7)
  */
-export async function getProjectsNearDeadline(daysAhead = 7) {
+export async function getProjectsNearDeadline(daysAhead = 30) {
   const proyectos = await apiClient.get('/dashboard/proyectos-proximos-vencer', { params: { dias: daysAhead } });
 
   const hoy = new Date();

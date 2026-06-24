@@ -56,6 +56,11 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 'pendiente',
       },
+      archivado: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
     },
     {
       sequelize,

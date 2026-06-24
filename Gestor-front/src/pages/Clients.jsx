@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, ArrowLeft, Mail, Phone, MapPin, Star, Eye } from 'lucide-react';
+import { Plus, Search, ArrowLeft, Mail, Phone, MapPin, Star, Eye, Edit2 } from 'lucide-react';
 import EntityFormModal from '../components/modals/EntityFormModal';
 import WorkOrderDetailModal from '../components/modals/WorkOrderDetailModal';
 import StatusBadge from '../components/StatusBadge';
-import { getClients, getClientById, createClient, getClientProjectHistory } from '../services/clientsService';
-import { getSuppliers, getSupplierById, createSupplier, getSupplierAverageRating, getSupplierProjectHistory } from '../services/suppliersService';
+import { getClients, getClientById, createClient, updateClient, getClientProjectHistory } from '../services/clientsService';
+import { getSuppliers, getSupplierById, createSupplier, updateSupplier, getSupplierAverageRating, getSupplierProjectHistory } from '../services/suppliersService';
 import './Clients.css';
 
 const TABS = [
@@ -47,6 +47,7 @@ export default function Clients() {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingEntity, setEditingEntity] = useState(null);
   const [supplierRatings, setSupplierRatings] = useState({});
   const [viewingOrder, setViewingOrder] = useState(null);
 
@@ -103,6 +104,23 @@ export default function Clients() {
     refresh();
   }
 
+  async function handleEdit(payload) {
+    if (activeTab === 'clientes') {
+      await updateClient(editingEntity.id, payload);
+    } else {
+      await updateSupplier(editingEntity.id, payload);
+    }
+    setEditingEntity(null);
+    refresh();
+    // Si estamos en la vista de detalle, refrescar también
+    if (selectedEntity?.id === editingEntity.id) {
+      const updated = activeTab === 'clientes'
+        ? await getClientById(editingEntity.id)
+        : await getSupplierById(editingEntity.id);
+      if (updated) setSelectedEntity(updated);
+    }
+  }
+
   const list = activeTab === 'clientes' ? clients : suppliers;
   const filteredList = list.filter((entity) => entity.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -119,6 +137,13 @@ export default function Clients() {
             <h1 className="page-title">{selectedEntity.name}</h1>
             <p className="page-subtitle">{isClient ? 'Cliente' : 'Proveedor'} desde {selectedEntity.since}</p>
           </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setEditingEntity(selectedEntity)}
+          >
+            <Edit2 size={15} /> Editar
+          </button>
         </div>
 
         <div className="profile-grid">
@@ -269,6 +294,14 @@ export default function Clients() {
         </div>
 
         {viewingOrder && <WorkOrderDetailModal order={viewingOrder} onClose={() => setViewingOrder(null)} />}
+        {editingEntity && (
+          <EntityFormModal
+            kind={isClient ? 'cliente' : 'proveedor'}
+            entity={editingEntity}
+            onClose={() => setEditingEntity(null)}
+            onSave={handleEdit}
+          />
+        )}
       </div>
     );
   }
@@ -318,7 +351,17 @@ export default function Clients() {
               className="panel panel-padded panel-hoverable"
               onClick={() => openProfile(entity)}
             >
-              <h3 className="cell-strong">{entity.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 className="cell-strong">{entity.name}</h3>
+                <button
+                  type="button"
+                  className="btn-icon"
+                  title="Editar"
+                  onClick={(e) => { e.stopPropagation(); setEditingEntity(entity); }}
+                >
+                  <Edit2 size={14} />
+                </button>
+              </div>
               <p className="cell-muted">{entity.contact}</p>
               <div className="entity-card-footer">
                 {'totalBilled' in entity ? (
@@ -349,6 +392,14 @@ export default function Clients() {
           kind={activeTab === 'clientes' ? 'cliente' : 'proveedor'}
           onClose={() => setShowModal(false)}
           onSave={handleCreate}
+        />
+      )}
+      {editingEntity && (
+        <EntityFormModal
+          kind={activeTab === 'clientes' ? 'cliente' : 'proveedor'}
+          entity={editingEntity}
+          onClose={() => setEditingEntity(null)}
+          onSave={handleEdit}
         />
       )}
     </div>
