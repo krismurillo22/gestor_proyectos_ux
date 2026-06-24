@@ -6,16 +6,21 @@ import './EntityFormModal.css';
  * Modal genérico para crear un cliente o un proveedor/taller (los dos
  * comparten los mismos campos básicos de contacto).
  *
- * NOTA backend: nombre y RTN son los únicos obligatorios; contacto/correo/
- * teléfono/dirección se guardan como columnas directas en Cliente/Proveedor
- * pero quedan opcionales porque no toda empresa tiene esos datos a mano al
- * registrarla.
+ * Todos los campos son obligatorios (nombre, RTN, contacto, correo,
+ * teléfono y dirección): antes contacto/correo/teléfono/dirección se
+ * mostraban como "(opcional)" pero en la práctica siempre se necesitan para
+ * dar seguimiento al cliente/proveedor, así que ahora también se validan
+ * para que no se puedan dejar vacíos (a pedido de Jorge, 2026-06-24).
  *
  * @param {{ kind: 'cliente' | 'proveedor', onClose: Function, onSave: Function }} props
  */
 const REQUIRED_FIELDS = [
   { key: 'name', label: 'Nombre de la empresa' },
   { key: 'rtn', label: 'RTN' },
+  { key: 'contact', label: 'Nombre de contacto' },
+  { key: 'email', label: 'Correo' },
+  { key: 'phone', label: 'Teléfono' },
+  { key: 'address', label: 'Dirección' },
 ];
 
 function FieldError({ message }) {
@@ -113,7 +118,7 @@ export default function EntityFormModal({ kind, onClose, onSave, entity }) {
 
             <div className="form-group">
               <label className="form-label" htmlFor="entity-contact">
-                Nombre de contacto <span className="form-help">(opcional)</span>
+                Nombre de contacto
               </label>
               <input
                 id="entity-contact"
@@ -124,6 +129,7 @@ export default function EntityFormModal({ kind, onClose, onSave, entity }) {
                   clearError('contact');
                 }}
                 aria-invalid={Boolean(errors.contact)}
+                required
               />
               <FieldError message={errors.contact} />
             </div>
@@ -152,7 +158,7 @@ export default function EntityFormModal({ kind, onClose, onSave, entity }) {
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label" htmlFor="entity-email">
-                  Correo <span className="form-help">(opcional)</span>
+                  Correo
                 </label>
                 <input
                   id="entity-email"
@@ -164,12 +170,13 @@ export default function EntityFormModal({ kind, onClose, onSave, entity }) {
                     clearError('email');
                   }}
                   aria-invalid={Boolean(errors.email)}
+                  required
                 />
                 <FieldError message={errors.email} />
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="entity-phone">
-                  Teléfono <span className="form-help">(opcional)</span>
+                  Teléfono
                 </label>
                 <input
                   id="entity-phone"
@@ -180,6 +187,7 @@ export default function EntityFormModal({ kind, onClose, onSave, entity }) {
                     clearError('phone');
                   }}
                   aria-invalid={Boolean(errors.phone)}
+                  required
                 />
                 <FieldError message={errors.phone} />
               </div>
@@ -187,7 +195,7 @@ export default function EntityFormModal({ kind, onClose, onSave, entity }) {
 
             <div className="form-group">
               <label className="form-label" htmlFor="entity-address">
-                Dirección <span className="form-help">(opcional)</span>
+                Dirección
               </label>
               <input
                 id="entity-address"
@@ -198,6 +206,7 @@ export default function EntityFormModal({ kind, onClose, onSave, entity }) {
                   clearError('address');
                 }}
                 aria-invalid={Boolean(errors.address)}
+                required
               />
               <FieldError message={errors.address} />
             </div>

@@ -24,6 +24,7 @@ const TABS = [
   { key: 'Cotizando', label: 'Cotizando' },
   { key: 'Enviada al cliente', label: 'Enviada al cliente' },
   { key: 'Aprobada', label: 'Aprobada' },
+  { key: 'Terminado', label: 'Terminado' },
   { key: 'Rechazada', label: 'Rechazada' },
 ];
 

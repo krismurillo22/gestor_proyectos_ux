@@ -26,7 +26,12 @@ function formatMoney(value) {
 
 /**
  * KPIs principales del dashboard (las 4 tarjetas de arriba).
- * GET /api/dashboard/kpis → { proyectosActivos, cotizacionesPendientes, nuevosClientes, ingresosMes }
+ * GET /api/dashboard/kpis → { proyectosActivos, solicitudesPendientes, nuevosClientes, ingresosMes }
+ *
+ * "Solicitudes Pendientes" (antes "Cotizaciones Pendientes") cuenta
+ * solicitudes sin cotización aprobada todavía, una vez por solicitud — así
+ * no se infla el número cuando varios talleres están cotizando la misma
+ * solicitud (a pedido de Jorge, 2026-06-24).
  */
 export async function getKpis() {
   const data = await apiClient.get('/dashboard/kpis');
@@ -34,7 +39,7 @@ export async function getKpis() {
 
   return [
     { id: 'proyectos-activos', label: 'Proyectos Activos', value: data.proyectosActivos, change: '', color: 'sky' },
-    { id: 'cotizaciones-pendientes', label: 'Cotizaciones Pendientes', value: data.cotizacionesPendientes, change: '', color: 'amber' },
+    { id: 'solicitudes-pendientes', label: 'Solicitudes Pendientes', value: data.solicitudesPendientes, change: '', color: 'amber' },
     { id: 'nuevos-clientes', label: 'Nuevos Clientes', value: data.nuevosClientes, change: '', color: 'emerald' },
     { id: 'ingresos-mes', label: `Ingresos ${mesActual}`, value: formatMoney(data.ingresosMes), change: '', color: 'primary' },
   ];
@@ -54,12 +59,16 @@ export async function getChartData(months = 6) {
 
 /**
  * Proyectos/órdenes próximas a vencer (panel de alertas del dashboard).
- * GET /api/dashboard/proyectos-proximos-vencer?dias=7 → Proyecto[] (con
+ * GET /api/dashboard/proyectos-proximos-vencer?dias=60 → Proyecto[] (con
  * include cotizacion->solicitud->cliente, ver dashboardController.js)
  *
- * @param {number} [daysAhead] umbral de días (default 7)
+ * Umbral pedido por Jorge (2026-06-24): un proyecto aparece aquí cuando
+ * faltan 2 meses o menos para su fecha_vencimiento. Se usa 60 días como
+ * aproximación de "2 meses" (igual que el default del backend).
+ *
+ * @param {number} [daysAhead] umbral de días (default 60 ≈ 2 meses)
  */
-export async function getProjectsNearDeadline(daysAhead = 30) {
+export async function getProjectsNearDeadline(daysAhead = 60) {
   const proyectos = await apiClient.get('/dashboard/proyectos-proximos-vencer', { params: { dias: daysAhead } });
 
   const hoy = new Date();

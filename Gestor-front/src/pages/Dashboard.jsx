@@ -10,7 +10,7 @@ import './Dashboard.css';
 
 const KPI_ICONS = {
   'proyectos-activos': ClipboardList,
-  'cotizaciones-pendientes': FileText,
+  'solicitudes-pendientes': FileText,
   'nuevos-clientes': Users,
   'ingresos-mes': TrendingUp,
 };
@@ -111,7 +111,8 @@ export default function Dashboard() {
 
         <div className="panel panel-padded">
           <h2 className="section-title">
-            <AlertCircle size={18} className="icon-primary" /> Próximos a vencer
+            <AlertCircle size={18} className="icon-primary" /> Próximos a vencer{' '}
+            <span className="form-help">(próximos 2 meses)</span>
           </h2>
           <div className="deadline-list">
             {deadlines.map((d) => (

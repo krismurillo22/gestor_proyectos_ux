@@ -9,6 +9,7 @@ const getSolicitudes = async (req, res) => {
     const solicitudes = await Solicitud.findAll({
       where: { activo: true },
       include: [{ model: Cliente, as: 'cliente' }],
+      order: [['createdAt', 'DESC']],
     });
 
     if (solicitudes.length === 0) {
@@ -65,6 +66,7 @@ const getSolicitudesByCliente = async (req, res) => {
     const solicitudes = await Solicitud.findAll({
       where: { id_cliente, activo: true },
       include: [{ model: Cotizacion, as: 'cotizaciones' }],
+      order: [['createdAt', 'DESC']],
     });
 
     if (solicitudes.length === 0) {

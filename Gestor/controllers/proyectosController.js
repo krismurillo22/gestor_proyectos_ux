@@ -45,13 +45,21 @@ const isPositiveInteger = (v) => {
     return Number.isInteger(n) && n > 0;
 };
 
-// GET /api/proyectos?estado=&id_cliente=&id_proveedor=
+// GET /api/proyectos?estado=&id_cliente=&id_proveedor=&incluirArchivados=true
 // id_cliente e id_proveedor filtran a través de la cotización asociada
 // (Proyecto -> Cotizacion -> Proveedor, y Proyecto -> Cotizacion -> Solicitud -> Cliente).
+//
+// Por defecto se excluyen los archivados (el kanban nunca debe mostrarlos),
+// pero ese mismo filtro estaba sacando las órdenes archivadas de TODO lo que
+// usa este endpoint sin pasar ?estado= — incluyendo el cálculo de proyectos
+// activos/ingresos y el historial de proyectos en Clientes y Proveedores
+// (que llaman a este endpoint sin filtro de estado para traer todo). Archivar
+// solo debe ocultar del kanban, no dejar de contar para esas otras vistas —
+// por eso ahora se puede pedir incluirArchivados=true (a pedido de Jorge, 2026-06-24).
 const getProyectos = async (req, res) => {
     try {
-        const { estado, id_cliente, id_proveedor } = req.query;
-        const where = { archivado: false };  // nunca mostrar archivados en el kanban
+        const { estado, id_cliente, id_proveedor, incluirArchivados } = req.query;
+        const where = incluirArchivados === 'true' ? {} : { archivado: false };
 
         if (estado) {
             if (!estadosValidos.includes(estado)) {

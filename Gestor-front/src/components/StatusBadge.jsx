@@ -14,6 +14,7 @@ const VARIANTS_BY_TYPE = {
     'enviada al cliente': 'badge-sky',
     aprobada: 'badge-emerald',
     rechazada: 'badge-red',
+    terminado: 'badge-slate-dark',
   },
   // Estado de una Cotización individual. 'pendiente' coincide con el ENUM
   // del backend; 'enviada al cliente' y 'descartada' son lectura del front

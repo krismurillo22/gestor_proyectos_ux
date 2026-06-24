@@ -11,6 +11,7 @@
 
 
 const { Cotizacion, DetalleCotizacion, Proveedor, Solicitud, Cliente } = require('../models');
+const { Op } = require('sequelize');
 
 // Estados posibles para cotizaciones
 const ESTADOS_COTIZACION = {
@@ -141,6 +142,19 @@ async function aprobarCotizacion(req, res) {
 
     cotizacion.estado = ESTADOS_COTIZACION.APROBADA;
     await cotizacion.save();
+
+    // El cliente ya aceptó esta cotización, así que las demás cotizaciones
+    // de la misma solicitud (de otros talleres) quedan descartadas
+    // automáticamente — a pedido de Jorge, 2026-06-24.
+    await Cotizacion.update(
+      { descartada: true },
+      {
+        where: {
+          id_solicitud: cotizacion.id_solicitud,
+          id_cotizacion: { [Op.ne]: cotizacion.id_cotizacion },
+        },
+      }
+    );
 
     const cotizacionCompleta = await Cotizacion.findByPk(id, { include: COTIZACION_INCLUDES });
     return res.status(200).json({ ok: true, cotizacion: cotizacionCompleta });

@@ -68,6 +68,7 @@ function adaptProyecto(p) {
   return {
     id: p.id_proyecto,
     quoteId: cotizacion.id_cotizacion ?? p.id_cotizacion,
+    clientId: cliente.id_cliente ?? null,
     client: cliente.nombre || '',
     supplierId: proveedor.id_proveedor ?? null,
     supplier: proveedor.nombre || '',
@@ -81,16 +82,23 @@ function adaptProyecto(p) {
 }
 
 /**
- * Lista las órdenes de trabajo (para la vista kanban).
- * GET /api/proyectos?estado=&id_proveedor=&id_cliente=
+ * Lista las órdenes de trabajo.
+ * GET /api/proyectos?estado=&id_proveedor=&id_cliente=&incluirArchivados=true
  *
- * @param {{ status?: string, supplierId?: number|string, clientId?: number|string }} [filters]
+ * Por defecto NO incluye las órdenes archivadas (correcto para el kanban de
+ * WorkOrders.jsx, que nunca debe mostrarlas). Para cálculos que sí deben
+ * seguir contando una orden ya archivada — proyectos activos/ingresos y el
+ * historial de proyectos en Clientes y Proveedores — pasar
+ * `includeArchived: true` (ver clientsService.js/suppliersService.js).
+ *
+ * @param {{ status?: string, supplierId?: number|string, clientId?: number|string, includeArchived?: boolean }} [filters]
  */
 export async function getWorkOrders(filters = {}) {
   const params = {};
   if (filters.status) params.estado = STATUS_TO_BACKEND[filters.status] || filters.status;
   if (filters.supplierId) params.id_proveedor = filters.supplierId;
   if (filters.clientId) params.id_cliente = filters.clientId;
+  if (filters.includeArchived) params.incluirArchivados = 'true';
 
   const proyectos = await apiClient.get('/proyectos', { params });
   return proyectos.map(adaptProyecto);
