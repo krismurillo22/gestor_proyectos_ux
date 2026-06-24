@@ -57,18 +57,27 @@ export default function Clients() {
 
   function refresh() {
     setLoading(true);
-    Promise.all([getClients(), getSuppliers()]).then(([clientsRes, suppliersRes]) => {
-      setClients(clientsRes);
-      setSuppliers(suppliersRes);
-      setLoading(false);
-      Promise.all(suppliersRes.map((s) => getSupplierAverageRating(s.id))).then((ratings) => {
-        const byId = {};
-        suppliersRes.forEach((s, i) => {
-          byId[s.id] = ratings[i];
+    Promise.all([getClients(), getSuppliers()])
+      .then(([clientsRes, suppliersRes]) => {
+        setClients(clientsRes);
+        setSuppliers(suppliersRes);
+        setLoading(false);
+        Promise.all(suppliersRes.map((s) => getSupplierAverageRating(s.id))).then((ratings) => {
+          const byId = {};
+          suppliersRes.forEach((s, i) => {
+            byId[s.id] = ratings[i];
+          });
+          setSupplierRatings(byId);
         });
-        setSupplierRatings(byId);
+      })
+      .catch((error) => {
+        // Defensa adicional: si algún servicio llega a fallar de verdad (no
+        // solo "lista vacía", que ya se maneja en clientsService/
+        // suppliersService), que la página salga de "Cargando…" en vez de
+        // quedarse colgada para siempre.
+        console.error('Error al cargar clientes/proveedores:', error);
+        setLoading(false);
       });
-    });
   }
 
   // entity llega con los datos ya cargados en la lista (totalBilled/
@@ -383,7 +392,13 @@ export default function Clients() {
               )}
             </div>
           ))}
-          {filteredList.length === 0 && <p className="empty-state">Sin resultados.</p>}
+          {filteredList.length === 0 && (
+            <p className="empty-state">
+              {list.length === 0
+                ? `Todavía no hay ningún ${activeTab === 'clientes' ? 'cliente' : 'proveedor'} registrado.`
+                : 'Sin resultados para esa búsqueda.'}
+            </p>
+          )}
         </div>
       )}
 

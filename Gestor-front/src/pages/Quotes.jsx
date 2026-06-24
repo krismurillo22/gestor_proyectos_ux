@@ -11,6 +11,7 @@ const TABS = [
   { key: 'pendiente', label: 'Pendiente' },
   { key: 'aprobada', label: 'Aprobada' },
   { key: 'rechazada', label: 'Rechazada' },
+  { key: 'descartada', label: 'Descartadas' },
 ];
 
 /**
@@ -39,15 +40,24 @@ export default function Quotes() {
     });
   }
 
+  // "descartada" no es un valor de `estado` (es la bandera `discarded`, que
+  // se activa manualmente al comparar cotizaciones o automáticamente al
+  // aprobarse otra cotización de la misma solicitud), así que esa pestaña
+  // se filtra distinto a las demás.
   const tabCounts = useMemo(() => {
     const counts = { all: quotes.length };
     for (const tab of TABS.slice(1)) {
-      counts[tab.key] = quotes.filter((q) => q.estado === tab.key).length;
+      counts[tab.key] = tab.key === 'descartada'
+        ? quotes.filter((q) => q.discarded).length
+        : quotes.filter((q) => q.estado === tab.key).length;
     }
     return counts;
   }, [quotes]);
 
-  const filteredQuotes = activeTab === 'all' ? quotes : quotes.filter((q) => q.estado === activeTab);
+  const filteredQuotes =
+    activeTab === 'all' ? quotes
+    : activeTab === 'descartada' ? quotes.filter((q) => q.discarded)
+    : quotes.filter((q) => q.estado === activeTab);
 
   async function handleSaveEdit(payload) {
     await updateQuote(editingQuote.id, payload);

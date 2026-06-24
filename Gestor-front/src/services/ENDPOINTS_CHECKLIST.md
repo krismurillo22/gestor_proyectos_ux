@@ -60,7 +60,7 @@ Importante para el front: tanto el listado como el detalle de `/api/proyectos` i
 
 - [ ] `GET /api/dashboard/kpis` — proyectos activos, cotizaciones pendientes, nuevos clientes, ingresos del mes — ✅ backend listo (**nuevo** — ver definiciones exactas en notas)
 - [ ] `GET /api/dashboard/cotizaciones-por-mes` — serie histórica para la gráfica (cotizadas vs aceptadas), parámetro opcional `?meses=` (default 6) — ✅ backend listo (**nuevo**)
-- [ ] `GET /api/dashboard/proyectos-proximos-vencer` — alertas de vencimiento, parámetro opcional `?dias=` (default 7) — ✅ backend listo (**nuevo**)
+- [ ] `GET /api/dashboard/proyectos-proximos-vencer` — alertas de vencimiento, parámetro opcional `?dias=` (default 60, ~2 meses) — ✅ backend listo (**nuevo**)
 
 ## Pendiente de decidir (no tiene service todavía)
 

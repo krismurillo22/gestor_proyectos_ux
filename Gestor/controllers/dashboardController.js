@@ -4,13 +4,23 @@ const { Proyecto, Cotizacion, Solicitud, Cliente, sequelize } = require('../mode
 const { Op } = require('sequelize');
 
 // GET /api/dashboard/kpis
-// Devuelve: proyectos activos, cotizaciones pendientes, nuevos clientes del mes
+// Devuelve: proyectos activos, solicitudes pendientes, nuevos clientes del mes
 // e ingresos del mes.
 //
 // OJO sobre "ingresosMes": hoy no existe un campo fecha_aprobacion en Cotizacion,
 // así que se usa updatedAt como proxy de "cuándo se aprobó" (se actualiza cuando
 // aprobarCotizacion cambia el estado). Si más adelante se necesita precisión,
 // conviene agregar un campo fecha_aprobacion dedicado.
+//
+// OJO sobre "solicitudesPendientes": antes este KPI contaba Cotizaciones en
+// estado 'pendiente' (cotizacionesPendientes), pero eso cuenta una solicitud
+// con varios talleres cotizando (sus cotizaciones "hermanas") como varias
+// pendientes en vez de una sola — confuso para Jorge incluso después de que
+// aprobar una descarta a las demás (mientras nadie aprueba, las hermanas
+// siguen sin descartar y siguen contando). Ahora se cuenta por Solicitud:
+// una solicitud activa está "pendiente" mientras ninguna de sus cotizaciones
+// haya sido aprobada (sin importar cuántos talleres estén cotizando), a
+// pedido de Jorge, 2026-06-24.
 const getKpis = async (req, res) => {
     try {
         const inicioMes = new Date();
@@ -22,8 +32,15 @@ const getKpis = async (req, res) => {
 
         const proyectosActivos = await Proyecto.count({ where: { estado: 'en_progreso' } });
 
-        const cotizacionesPendientes = await Cotizacion.count({
-            where: { estado: 'pendiente', descartada: false },
+        const solicitudesPendientes = await Solicitud.count({
+            where: {
+                activo: true,
+                id_solicitud: {
+                    [Op.notIn]: sequelize.literal(
+                        `(SELECT id_solicitud FROM "Cotizaciones" WHERE estado = 'aprobada')`
+                    ),
+                },
+            },
         });
 
         const nuevosClientes = await Cliente.count({
@@ -39,7 +56,7 @@ const getKpis = async (req, res) => {
 
         res.json({
             proyectosActivos,
-            cotizacionesPendientes,
+            solicitudesPendientes,
             nuevosClientes,
             ingresosMes: ingresosMes || 0,
         });
@@ -86,14 +103,15 @@ const getCotizacionesPorMes = async (req, res) => {
     }
 };
 
-// GET /api/dashboard/proyectos-proximos-vencer?dias=7
+// GET /api/dashboard/proyectos-proximos-vencer?dias=60
 // Proyectos en_progreso cuya fecha_vencimiento cae dentro de los próximos N días
-// (por defecto 7), ordenados del más urgente al menos urgente. Incluye
-// cotizacion->solicitud->cliente para que el front pueda mostrar el nombre
-// del cliente sin tener que pedir el detalle completo de cada proyecto.
+// (por defecto 60, ~2 meses, a pedido de Jorge — 2026-06-24), ordenados del
+// más urgente al menos urgente. Incluye cotizacion->solicitud->cliente para
+// que el front pueda mostrar el nombre del cliente sin tener que pedir el
+// detalle completo de cada proyecto.
 const getProyectosProximosVencer = async (req, res) => {
     try {
-        const dias = Number(req.query.dias) > 0 ? Number(req.query.dias) : 7;
+        const dias = Number(req.query.dias) > 0 ? Number(req.query.dias) : 60;
 
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);

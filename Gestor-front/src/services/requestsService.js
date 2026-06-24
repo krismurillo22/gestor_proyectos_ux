@@ -9,16 +9,26 @@
  *
  * Huecos conocidos (no se inventan datos, se degrada con gracia):
  *   - El backend no calcula el estado de la solicitud (Cotizando/Enviada al
- *     cliente/Aprobada/Rechazada) ni cuántas cotizaciones tiene — se sigue
- *     derivando aquí con deriveRequestStatus, a partir de sus cotizaciones
- *     reales (una llamada a getQuotesByRequest por cada solicitud listada;
- *     con pocos datos como ahora esto es rápido, pero son N+1 llamadas).
+ *     cliente/Aprobada/Rechazada/Terminado) ni cuántas cotizaciones tiene —
+ *     se sigue derivando aquí con deriveRequestStatus, a partir de sus
+ *     cotizaciones reales (una llamada a getQuotesByRequest por cada
+ *     solicitud listada; con pocos datos como ahora esto es rápido, pero son
+ *     N+1 llamadas).
  *   - El filtro `status` de getRequests ya no se aplica en el servidor
  *     (nunca existió ahí, era una invención del mock); se sigue filtrando
  *     en el front, después de derivar el estado de cada solicitud.
+ *   - 'Terminado': una vez que la orden de trabajo de la cotización aprobada
+ *     llega a 'Completada' (incluso si ya se archivó del kanban), la
+ *     solicitud deja de mostrarse como 'Aprobada' y pasa a 'Terminado' — así
+ *     queda claro que ese trabajo ya no debe volver a generar una orden
+ *     nueva (a pedido de Jorge, 2026-06-24). Para esto se trae
+ *     getWorkOrders({ includeArchived: true }) una sola vez y se busca la
+ *     cotización enviada por su quoteId, en vez de pedir el detalle de cada
+ *     orden por separado.
  */
 import { apiClient } from './apiClient';
 import { getQuotesByRequest } from './quotesService';
+import { getWorkOrders } from './workOrdersService';
 
 function toDateStr(value) {
   if (!value) return null;
@@ -42,17 +52,20 @@ function adaptSolicitud(s) {
  * guarda en la solicitud, así nunca queda desincronizado):
  *   - 'Cotizando': todavía no se elige cuál cotización mandar al cliente.
  *   - 'Enviada al cliente': ya se eligió una y se espera respuesta.
- *   - 'Aprobada' / 'Rechazada': el cliente ya respondió la que se le envió.
+ *   - 'Aprobada': el cliente ya aceptó, pero el trabajo todavía no termina.
+ *   - 'Terminado': el cliente aceptó Y la orden de trabajo ya se completó.
+ *   - 'Rechazada': el cliente rechazó la que se le envió.
  *
  * Helper puro (no hace ninguna llamada) — no tiene endpoint propio.
  *
  * @param {object[]} quotesForRequest  cotizaciones ya adaptadas (ver quotesService.adaptQuote)
+ * @param {boolean} [workCompleted]  true si la orden de trabajo de la cotización aprobada ya está 'Completada'
  */
-export function deriveRequestStatus(quotesForRequest) {
+export function deriveRequestStatus(quotesForRequest, workCompleted = false) {
   const sent = quotesForRequest.find((q) => q.sentToClient);
   if (!sent) return 'Cotizando';
   if (sent.estado === 'pendiente') return 'Enviada al cliente';
-  if (sent.estado === 'aprobada') return 'Aprobada';
+  if (sent.estado === 'aprobada') return workCompleted ? 'Terminado' : 'Aprobada';
   return 'Rechazada';
 }
 
@@ -76,11 +89,17 @@ export async function getRequests(filters = {}) {
     else throw error;
   }
 
+  const orders = await getWorkOrders({ includeArchived: true });
+
   const withStatus = await Promise.all(
     solicitudes.map(async (s) => {
       const request = adaptSolicitud(s);
       const quotes = await getQuotesByRequest(request.id);
-      return { ...request, status: deriveRequestStatus(quotes), quoteCount: quotes.length };
+      const sent = quotes.find((q) => q.sentToClient);
+      const workCompleted = Boolean(
+        sent && orders.some((o) => String(o.quoteId) === String(sent.id) && o.status === 'Completada')
+      );
+      return { ...request, status: deriveRequestStatus(quotes, workCompleted), quoteCount: quotes.length };
     })
   );
 
@@ -99,7 +118,15 @@ export async function getRequestById(id) {
     const solicitud = await apiClient.get(`/solicitudes/${id}`);
     const request = adaptSolicitud(solicitud);
     const quotes = await getQuotesByRequest(id);
-    return { ...request, status: deriveRequestStatus(quotes) };
+    const sent = quotes.find((q) => q.sentToClient);
+
+    let workCompleted = false;
+    if (sent) {
+      const orders = await getWorkOrders({ includeArchived: true });
+      workCompleted = orders.some((o) => String(o.quoteId) === String(sent.id) && o.status === 'Completada');
+    }
+
+    return { ...request, status: deriveRequestStatus(quotes, workCompleted) };
   } catch (error) {
     if (error.status === 404) return null;
     throw error;

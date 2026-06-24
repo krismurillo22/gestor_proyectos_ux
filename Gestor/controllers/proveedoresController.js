@@ -94,6 +94,22 @@ const createProveedor = async (req, res) => {
       });
     }
 
+    if (!contacto || !contacto.trim()) {
+      return res.status(400).json({ error: 'El contacto es requerido' });
+    }
+
+    if (!correo || !correo.trim()) {
+      return res.status(400).json({ error: 'El correo es requerido' });
+    }
+
+    if (!telefono || !telefono.trim()) {
+      return res.status(400).json({ error: 'El teléfono es requerido' });
+    }
+
+    if (!direccion || !direccion.trim()) {
+      return res.status(400).json({ error: 'La dirección es requerida' });
+    }
+
     if (rtn) {
       const proveedorExistente = await Proveedor.findOne({
         where: {
@@ -153,6 +169,22 @@ const updateProveedor = async (req, res) => {
       return res.status(400).json({
         error: `El nombre no puede iniciar con ${INACTIVO_PREFIX}`,
       });
+    }
+
+    if (contacto !== undefined && !contacto.trim()) {
+      return res.status(400).json({ error: 'El contacto no puede estar vacío' });
+    }
+
+    if (correo !== undefined && !correo.trim()) {
+      return res.status(400).json({ error: 'El correo no puede estar vacío' });
+    }
+
+    if (telefono !== undefined && !telefono.trim()) {
+      return res.status(400).json({ error: 'El teléfono no puede estar vacío' });
+    }
+
+    if (direccion !== undefined && !direccion.trim()) {
+      return res.status(400).json({ error: 'La dirección no puede estar vacía' });
     }
 
     if (rtn !== undefined && rtn) {

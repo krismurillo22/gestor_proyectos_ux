@@ -44,6 +44,25 @@ function adaptCliente(c) {
   };
 }
 
+// La vista previa de Clients.jsx (tarjetas de la lista) muestra
+// activeProjects/totalBilled, que adaptCliente deja en 0. En vez de pedir el
+// detalle de cada cliente (N+1 contra /clientes/:id), se trae UNA sola vez
+// todas las órdenes de trabajo y se agrupan por clientId. totalQuotes no se
+// incluye aquí porque ninguna tarjeta de la lista la muestra (solo el
+// detalle, vía getClientById).
+function withOrderStats(clientesAdaptados, orders) {
+  return clientesAdaptados.map((cliente) => {
+    const propias = orders.filter((o) => o.clientId === cliente.id);
+    return {
+      ...cliente,
+      activeProjects: propias.filter((o) => o.status === 'Pendiente' || o.status === 'En Progreso').length,
+      totalBilled: propias
+        .filter((o) => o.status === 'Completada')
+        .reduce((sum, o) => sum + (o.quoteTotal || 0), 0),
+    };
+  });
+}
+
 /**
  * Lista los clientes (empresas que solicitan cotizaciones).
  *
@@ -57,7 +76,13 @@ export async function getClients(search = '') {
     const clientes = search
       ? await apiClient.get('/clientes/buscar', { params: { nombre: search } })
       : await apiClient.get('/clientes');
-    return clientes.map(adaptCliente);
+    const adapted = clientes.map(adaptCliente);
+    // includeArchived: true — una orden archivada sigue siendo un proyecto
+    // completado real, así que debe seguir contando en totalBilled/
+    // activeProjects. Archivar solo oculta del kanban (a pedido de Jorge,
+    // 2026-06-24).
+    const orders = await getWorkOrders({ includeArchived: true });
+    return withOrderStats(adapted, orders);
   } catch (error) {
     if (error.status === 404) return [];
     throw error;
@@ -85,7 +110,7 @@ export async function getClientById(id) {
   const base = adaptCliente(cliente);
 
   const [orders, solicitudes] = await Promise.all([
-    getWorkOrders({ clientId: id }),
+    getWorkOrders({ clientId: id, includeArchived: true }),
     apiClient.get(`/solicitudes/cliente/${id}`).catch((error) => {
       if (error.status === 404) return [];
       throw error;
@@ -113,7 +138,7 @@ export async function getClientById(id) {
  * @param {string|number} clientId
  */
 export async function getClientProjectHistory(clientId) {
-  const orders = await getWorkOrders({ clientId });
+  const orders = await getWorkOrders({ clientId, includeArchived: true });
   return orders
     .map((o) => ({ ...o, total: o.quoteTotal }))
     .sort((a, b) => (a.dueDate < b.dueDate ? 1 : -1));

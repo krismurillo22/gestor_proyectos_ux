@@ -38,10 +38,34 @@ function adaptProveedor(p) {
   };
 }
 
+// La vista previa de Clients.jsx (tarjetas de la lista de proveedores)
+// muestra activeOrders/totalPurchased, que adaptProveedor deja en 0. En vez
+// de pedir el detalle de cada proveedor (N+1 contra /proveedores/:id), se
+// trae UNA sola vez todas las órdenes de trabajo y se agrupan por
+// supplierId.
+function withOrderStats(proveedoresAdaptados, orders) {
+  return proveedoresAdaptados.map((proveedor) => {
+    const propias = orders.filter((o) => o.supplierId === proveedor.id);
+    return {
+      ...proveedor,
+      activeOrders: propias.filter((o) => o.status === 'Pendiente' || o.status === 'En Progreso').length,
+      totalPurchased: propias
+        .filter((o) => o.status === 'Completada')
+        .reduce((sum, o) => sum + (o.quoteTotal || 0), 0),
+    };
+  });
+}
+
 /**
  * Lista los proveedores/talleres (a quienes se asignan las órdenes de trabajo).
  *
  * GET /api/proveedores
+ *
+ * El backend responde 204 sin cuerpo (no 200 con lista vacía) cuando no hay
+ * proveedores registrados — apiClient.js resuelve un 204 como `null` (no lo
+ * trata como error), así que hay que cubrir ese caso a mano o `null.map()`
+ * revienta y deja la página de Clientes y Proveedores en "Cargando…" para
+ * siempre (el Promise.all de Clients.jsx nunca llega a su .then).
  *
  * No existe un endpoint de búsqueda server-side para proveedores (a
  * diferencia de clientes, que sí tiene /clientes/buscar) — el filtro por
@@ -51,8 +75,14 @@ function adaptProveedor(p) {
  */
 export async function getSuppliers(search = '') {
   const proveedores = await apiClient.get('/proveedores');
-  const adapted = proveedores.map(adaptProveedor);
-  return search ? adapted.filter((s) => s.name.toLowerCase().includes(search.toLowerCase())) : adapted;
+  const adapted = (proveedores || []).map(adaptProveedor);
+  const filtered = search ? adapted.filter((s) => s.name.toLowerCase().includes(search.toLowerCase())) : adapted;
+  // includeArchived: true — una orden archivada sigue siendo un proyecto
+  // completado real, así que debe seguir contando en totalPurchased/
+  // activeOrders. Archivar solo oculta del kanban (a pedido de Jorge,
+  // 2026-06-24).
+  const orders = await getWorkOrders({ includeArchived: true });
+  return withOrderStats(filtered, orders);
 }
 
 /**
@@ -74,7 +104,7 @@ export async function getSupplierById(id) {
   }
 
   const base = adaptProveedor(proveedor);
-  const orders = await getWorkOrders({ supplierId: id });
+  const orders = await getWorkOrders({ supplierId: id, includeArchived: true });
   base.activeOrders = orders.filter((o) => o.status === 'Pendiente' || o.status === 'En Progreso').length;
   base.totalPurchased = orders
     .filter((o) => o.status === 'Completada')
@@ -149,6 +179,6 @@ export async function getSupplierAverageRating(supplierId) {
  * @param {string|number} supplierId
  */
 export async function getSupplierProjectHistory(supplierId) {
-  const orders = await getWorkOrders({ supplierId });
+  const orders = await getWorkOrders({ supplierId, includeArchived: true });
   return [...orders].sort((a, b) => (a.dueDate < b.dueDate ? 1 : -1));
 }

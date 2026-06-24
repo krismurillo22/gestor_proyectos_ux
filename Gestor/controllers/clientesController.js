@@ -145,6 +145,22 @@ const createCliente = async (req, res) => {
       return res.status(400).json({ error: 'El RTN debe tener el formato 0000-0000-00000' });
     }
 
+    if (!contacto || contacto.trim() === '') {
+      return res.status(400).json({ error: 'El contacto es requerido' });
+    }
+
+    if (!correo || correo.trim() === '') {
+      return res.status(400).json({ error: 'El correo es requerido' });
+    }
+
+    if (!telefono || telefono.trim() === '') {
+      return res.status(400).json({ error: 'El teléfono es requerido' });
+    }
+
+    if (!direccion || direccion.trim() === '') {
+      return res.status(400).json({ error: 'La dirección es requerida' });
+    }
+
     const clienteExistente = await Cliente.findOne({
       where: { nombre: { [Op.iLike]: nombre.trim() }, activo: true },
     });
@@ -201,6 +217,22 @@ const updateCliente = async (req, res) => {
 
     if (rtn && !/^\d{4}-\d{4}-\d{5}$/.test(rtn)) {
       return res.status(400).json({ error: 'El RTN debe tener el formato 0000-0000-00000' });
+    }
+
+    if (!contacto || contacto.trim() === '') {
+      return res.status(400).json({ error: 'El contacto es requerido' });
+    }
+
+    if (!correo || correo.trim() === '') {
+      return res.status(400).json({ error: 'El correo es requerido' });
+    }
+
+    if (!telefono || telefono.trim() === '') {
+      return res.status(400).json({ error: 'El teléfono es requerido' });
+    }
+
+    if (!direccion || direccion.trim() === '') {
+      return res.status(400).json({ error: 'La dirección es requerida' });
     }
 
     const nombreExistente = await Cliente.findOne({

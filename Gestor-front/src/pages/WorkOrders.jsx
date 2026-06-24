@@ -5,6 +5,7 @@ import { WORK_ORDER_COLUMNS } from '../mocks/workOrders';
 import WorkOrderDetailModal from '../components/modals/WorkOrderDetailModal';
 import WorkOrderFormModal from '../components/modals/WorkOrderFormModal';
 import WorkOrderEvaluationModal from '../components/modals/WorkOrderEvaluationModal';
+import WorkOrderArchiveModal from '../components/modals/WorkOrderArchiveModal';
 import { getWorkOrders, createWorkOrder, updateWorkOrderStatus, submitWorkOrderEvaluation, archiveWorkOrder } from '../services/workOrdersService';
 import './WorkOrders.css';
 
@@ -15,12 +16,14 @@ export default function WorkOrders() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const [presetQuoteId, setPresetQuoteId] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [search, setSearch] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [evaluatingOrder, setEvaluatingOrder] = useState(null);
+  const [usedQuoteIds, setUsedQuoteIds] = useState([]);
 
   useEffect(() => {
     refresh();
@@ -40,8 +43,15 @@ export default function WorkOrders() {
 
   function refresh() {
     setLoading(true);
-    getWorkOrders().then((data) => {
+    // El kanban solo debe mostrar órdenes no archivadas, pero usedQuoteIds
+    // (qué cotizaciones ya tienen una orden y por lo tanto no deben volver a
+    // aparecer al crear una orden nueva) tiene que incluir TAMBIÉN las
+    // archivadas — si no, una orden ya completada y archivada "libera" su
+    // cotización y se puede crear una orden duplicada para el mismo trabajo
+    // (a pedido de Jorge, 2026-06-24).
+    Promise.all([getWorkOrders(), getWorkOrders({ includeArchived: true })]).then(([data, allData]) => {
       setOrders(data);
+      setUsedQuoteIds(allData.map((o) => o.quoteId));
       setLoading(false);
     });
   }
@@ -106,9 +116,14 @@ export default function WorkOrders() {
           <h1 className="page-title">Órdenes de Trabajo</h1>
           <p className="page-subtitle">Da seguimiento al trabajo asignado a los talleres</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          <Plus size={16} /> Nueva Orden
-        </button>
+        <div className="row-actions">
+          <button type="button" className="btn btn-secondary" onClick={() => setShowArchive(true)}>
+            <Archive size={16} /> Archivero de órdenes
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+            <Plus size={16} /> Nueva Orden
+          </button>
+        </div>
       </div>
 
       <div className="kanban-filters">
@@ -233,7 +248,7 @@ export default function WorkOrders() {
       )}
       {showAddModal && (
         <WorkOrderFormModal
-          usedQuoteIds={orders.map((o) => o.quoteId)}
+          usedQuoteIds={usedQuoteIds}
           initialQuoteId={presetQuoteId}
           onClose={() => {
             setShowAddModal(false);
@@ -244,6 +259,16 @@ export default function WorkOrders() {
       )}
       {evaluatingOrder && (
         <WorkOrderEvaluationModal order={evaluatingOrder} onClose={() => setEvaluatingOrder(null)} onSave={handleSubmitEvaluation} />
+      )}
+      {showArchive && (
+        <WorkOrderArchiveModal
+          onClose={() => {
+            setShowArchive(false);
+            // Si se restauró alguna orden al kanban desde el archivero, que
+            // se vea reflejada de una vez en el tablero sin recargar la página.
+            refresh();
+          }}
+        />
       )}
     </div>
   );
