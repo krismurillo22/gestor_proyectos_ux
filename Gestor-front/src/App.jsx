@@ -6,6 +6,7 @@ import Quotes from './pages/Quotes';
 import WorkOrders from './pages/WorkOrders';
 import Clients from './pages/Clients';
 import Settings from './pages/Settings';
+import Reports from './pages/Reports';
 
 /**
  * Árbol de rutas de la app. Coincide con la navegación del sidebar
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="cotizaciones" element={<Quotes />} />
           <Route path="ordenes" element={<WorkOrders />} />
           <Route path="clientes" element={<Clients />} />
+          <Route path="reportes" element={<Reports />} />
           <Route path="configuracion" element={<Settings />} />
         </Route>
       </Routes>

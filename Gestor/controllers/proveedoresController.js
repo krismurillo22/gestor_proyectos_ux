@@ -80,7 +80,7 @@ const getProveedorById = async (req, res) => {
 // POST /api/proveedores
 const createProveedor = async (req, res) => {
   try {
-    const { nombre, rtn } = req.body;
+    const { nombre, rtn, contacto, correo, telefono, direccion } = req.body;
 
     if (!nombre) {
       return res.status(400).json({
@@ -109,7 +109,14 @@ const createProveedor = async (req, res) => {
       }
     }
 
-    const proveedor = await Proveedor.create({ nombre, rtn });
+    const proveedor = await Proveedor.create({
+      nombre,
+      rtn,
+      contacto: contacto?.trim() || null,
+      correo: correo?.trim() || null,
+      telefono: telefono?.trim() || null,
+      direccion: direccion?.trim() || null,
+    });
 
     res.status(201).json({
       message: 'Proveedor creado exitosamente',
@@ -134,13 +141,7 @@ const updateProveedor = async (req, res) => {
       });
     }
 
-    const { nombre, rtn } = req.body;
-
-    if (nombre === undefined && rtn === undefined) {
-      return res.status(400).json({
-        error: 'Debe enviar al menos un campo para actualizar',
-      });
-    }
+    const { nombre, rtn, contacto, correo, telefono, direccion } = req.body;
 
     if (nombre !== undefined && !nombre) {
       return res.status(400).json({
@@ -175,6 +176,10 @@ const updateProveedor = async (req, res) => {
     await proveedor.update({
       ...(nombre !== undefined && { nombre }),
       ...(rtn !== undefined && { rtn }),
+      ...(contacto !== undefined && { contacto: contacto?.trim() || null }),
+      ...(correo !== undefined && { correo: correo?.trim() || null }),
+      ...(telefono !== undefined && { telefono: telefono?.trim() || null }),
+      ...(direccion !== undefined && { direccion: direccion?.trim() || null }),
     });
 
     res.json({

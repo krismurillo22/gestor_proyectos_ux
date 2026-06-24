@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, Clock, Factory } from 'lucide-react';
+import { Plus, Clock, Factory, Search, X, Archive } from 'lucide-react';
 import { WORK_ORDER_COLUMNS } from '../mocks/workOrders';
 import WorkOrderDetailModal from '../components/modals/WorkOrderDetailModal';
 import WorkOrderFormModal from '../components/modals/WorkOrderFormModal';
 import WorkOrderEvaluationModal from '../components/modals/WorkOrderEvaluationModal';
-import { getWorkOrders, createWorkOrder, updateWorkOrderStatus, submitWorkOrderEvaluation } from '../services/workOrdersService';
+import { getWorkOrders, createWorkOrder, updateWorkOrderStatus, submitWorkOrderEvaluation, archiveWorkOrder } from '../services/workOrdersService';
 import './WorkOrders.css';
 
 export default function WorkOrders() {
@@ -17,6 +17,9 @@ export default function WorkOrders() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [presetQuoteId, setPresetQuoteId] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [evaluatingOrder, setEvaluatingOrder] = useState(null);
 
   useEffect(() => {
@@ -74,6 +77,28 @@ export default function WorkOrders() {
     refresh();
   }
 
+  const filteredOrders = orders.filter((o) => {
+    if (search) {
+      const q = search.toLowerCase();
+      const matches =
+        o.client?.toLowerCase().includes(q) ||
+        o.supplier?.toLowerCase().includes(q) ||
+        o.description?.toLowerCase().includes(q) ||
+        String(o.id).includes(q);
+      if (!matches) return false;
+    }
+    if (filterDateFrom && o.dueDate && o.dueDate < filterDateFrom) return false;
+    if (filterDateTo && o.dueDate && o.dueDate > filterDateTo) return false;
+    return true;
+  });
+
+  const hasFilters = search || filterDateFrom || filterDateTo;
+
+  async function handleArchive(id) {
+    await archiveWorkOrder(id);
+    refresh();
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -86,12 +111,60 @@ export default function WorkOrders() {
         </button>
       </div>
 
+      <div className="kanban-filters">
+        <div className="kanban-filter-search">
+          <Search size={14} className="kanban-filter-icon" />
+          <input
+            type="text"
+            className="kanban-filter-input"
+            placeholder="Buscar por cliente, taller, descripción u OT…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button type="button" className="kanban-filter-clear-x" onClick={() => setSearch('')}>
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        <div className="kanban-filter-dates">
+          <span className="kanban-filter-date-label">Vence desde</span>
+          <input
+            type="date"
+            className="kanban-filter-date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+          />
+          <span className="kanban-filter-date-label">hasta</span>
+          <input
+            type="date"
+            className="kanban-filter-date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+          />
+        </div>
+        {hasFilters && (
+          <button
+            type="button"
+            className="btn btn-secondary kanban-filter-clear"
+            onClick={() => { setSearch(''); setFilterDateFrom(''); setFilterDateTo(''); }}
+          >
+            <X size={14} /> Limpiar filtros
+          </button>
+        )}
+        {hasFilters && (
+          <span className="kanban-filter-count">
+            {filteredOrders.length} orden{filteredOrders.length !== 1 ? 'es' : ''}
+          </span>
+        )}
+      </div>
+
       {loading ? (
         <p className="muted">Cargando órdenes…</p>
       ) : (
         <div className="kanban-board">
           {WORK_ORDER_COLUMNS.map((column) => {
-            const columnOrders = orders.filter((o) => o.status === column.status);
+            const columnOrders = filteredOrders.filter((o) => o.status === column.status);
             return (
               <div
                 key={column.status}
@@ -115,7 +188,7 @@ export default function WorkOrders() {
                       onClick={() => setSelectedOrder(order)}
                     >
                       <div className="kanban-card-top">
-                        <span className="cell-strong">{order.id}</span>
+                        <span className="cell-strong">OT-{order.id}</span>
                         {order.quoteTotal != null && <span className="kanban-card-total">${order.quoteTotal.toFixed(2)}</span>}
                       </div>
                       <p className="cell-muted">{order.client}</p>
@@ -129,6 +202,15 @@ export default function WorkOrders() {
                           <Clock size={13} /> {order.dueDate}
                         </span>
                       </div>
+                      {order.status === 'Completada' && (
+                        <button
+                          type="button"
+                          className="btn btn-primary kanban-archive-btn"
+                          onClick={(e) => { e.stopPropagation(); handleArchive(order.id); }}
+                        >
+                          <Archive size={13} /> Archivar
+                        </button>
+                      )}
                     </div>
                   ))}
                   {columnOrders.length === 0 && <p className="empty-state">Sin órdenes</p>}

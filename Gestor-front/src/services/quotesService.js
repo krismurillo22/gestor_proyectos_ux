@@ -1,33 +1,82 @@
 /**
- * NOTA PARA QUIEN CONECTE EL BACKEND:
- * Cada función abajo tiene un bloque "ENDPOINT REAL" con método, ruta,
- * query/body y la forma de la respuesta esperada, además de una línea
- * `apiClient...` ya escrita (comentada) lista para descomentar.
- * Guía paso a paso con un ejemplo completo: ver GUIA_CONEXION_BACKEND.md
- * en esta misma carpeta.
+ * Conectado al backend real (Gestor).
+ *
+ * cotizacionesController.js usa un sobre de respuesta distinto al resto del
+ * backend: { ok: true/false, cotizacion(es)/msg } en vez de { error } /
+ * { message, data }. Todas las funciones de aquí abajo desempacan ese sobre
+ * antes de devolver nada al resto del front, para que ningún componente
+ * tenga que saber de esa diferencia.
+ *
+ * El backend ahora incluye proveedor y solicitud->cliente en
+ * listarCotizaciones/obtenerCotizacionPorId/crearCotizacion/
+ * modificarCotizacion/aprobarCotizacion/rechazarCotizacion/enviarACliente
+ * (ver COTIZACION_INCLUDES en cotizacionesController.js), para que
+ * adaptQuote pueda leer taller y cliente sin pedirlos aparte.
+ *
+ * Huecos conocidos (no se inventan datos, se degrada con gracia):
+ *   - El modelo Cotizacion no guarda subtotal/tarifa de intermediación/ISV
+ *     como columnas propias, solo el `total` ya calculado. Por eso
+ *     adaptQuote no manda subtotal/tax/intermediationFee — se deja que
+ *     quoteDocx.js use el fallback que ya tenía para esto (recalcula el
+ *     ISV al vuelo a partir de `total`, ver buildQuoteDocument). El total
+ *     sí es el real, eso no se pierde.
+ *   - `sentToClient`/`discarded` (enviada_cliente/descartada) ya existen
+ *     como columnas en el modelo, pero la migración que las agregó
+ *     (tarea #58) hay que correrla en cada base nueva con
+ *     `npx sequelize-cli db:migrate` antes de que sendQuoteToClient/
+ *     discardQuote/restoreQuote funcionen.
  */
-// eslint-disable-next-line no-unused-vars -- queda listo para cuando se conecte el backend real (ver llamadas comentadas abajo)
 import { apiClient } from './apiClient';
-import { simulateNetwork } from './mockUtils';
-import { quotesData } from '../mocks/quotes';
-import { requestsData } from '../mocks/requests';
 
-// Copia mutable en memoria para que crear/editar/aprobar/rechazar se
-// reflejen durante la sesión mientras no hay backend real conectado.
-let mockQuotes = [...quotesData];
+function toDateStr(value) {
+  if (!value) return null;
+  const s = typeof value === 'string' ? value : value.toISOString();
+  return s.slice(0, 10);
+}
 
-function withClient(quote) {
-  const request = requestsData.find((r) => r.id === quote.requestId);
-  return { ...quote, client: request?.client ?? '', clientId: request?.clientId ?? '' };
+function adaptQuote(c) {
+  const cliente = c.solicitud?.cliente || {};
+  return {
+    id: c.id_cotizacion,
+    requestId: c.id_solicitud,
+    supplierId: c.id_proveedor,
+    supplier: c.proveedor?.nombre || '',
+    client: cliente.nombre || '',
+    clientId: cliente.id_cliente ?? c.solicitud?.id_cliente ?? '',
+    date: toDateStr(c.createdAt),
+    total: Number(c.total) || 0,
+    estado: c.estado,
+    sentToClient: Boolean(c.enviada_cliente),
+    discarded: Boolean(c.descartada),
+    intermediationFee: {
+      value: Number(c.tarifa_intermediacion || 0),
+      percent: Number(c.tarifa_porcentaje || 0),
+    },
+    notes: c.descripcion || '',
+    items: (c.detalles || []).map((d) => ({
+      title: d.nombre,
+      description: d.descripcion || '',
+      quantity: d.cantidad,
+      unitPrice: Number(d.valor) || 0,
+    })),
+  };
+}
+
+function buildDetalles(items = []) {
+  return items.map((it) => ({
+    nombre: it.title,
+    descripcion: it.description,
+    cantidad: it.quantity,
+    valor: it.unitPrice,
+  }));
 }
 
 /**
- * Etiqueta de estado a mostrar para una cotización individual (usada por
- * <StatusBadge type="quote" />). No es lo mismo que `estado` (el del
- * backend) porque también refleja las banderas de front sentToClient/discarded.
+ * Etiqueta de estado a mostrar para una cotización individual (la usa
+ * <StatusBadge type="quote" />): combina `estado` con las banderas
+ * sentToClient/discarded, que `estado` por sí solo no refleja.
  *
- * Es un helper puro (no llama a nada, ni mock ni real) — no tiene endpoint
- * propio, no hay nada que conectar aquí.
+ * Helper puro (no hace ninguna llamada) — no tiene endpoint propio.
  */
 export function getQuoteDisplayStatus(quote) {
   if (quote.discarded) return 'Descartada';
@@ -38,244 +87,152 @@ export function getQuoteDisplayStatus(quote) {
 }
 
 /**
- * Acceso síncrono a las cotizaciones de una solicitud, usado internamente
- * por requestsService para derivar el estado de la solicitud sin tener que
- * encadenar promesas. No simula latencia porque no es una llamada "real".
+ * Lista las cotizaciones (vista global de todas las solicitudes).
  *
- * No tiene endpoint propio: cuando se conecte el backend, esta función
- * sigue siendo síncrona y sigue leyendo del arreglo en memoria `mockQuotes`
- * (no se vuelve una llamada HTTP). Si requestsService necesitara datos
- * frescos del backend en algún punto, eso se resolvería ahí, no aquí.
- */
-export function getQuotesByRequestSync(requestId) {
-  return mockQuotes.filter((q) => q.requestId === requestId);
-}
-
-/**
- * Lista las cotizaciones (vista global, todas las solicitudes).
+ * GET /api/cotizaciones?estado=&id_solicitud=&id_proveedor=
  *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/cotizaciones
- * Query:     ?estado=  (opcional: pendiente|aprobada|rechazada)
- *            &requestId=  (opcional) &supplierId=  (opcional)
- *            &page=  &pageSize=  (paginación, opcional)
- * Body:      (no aplica)
- * Respuesta: { data: Cotizacion[], total: number }
- *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {{ estado?: string, requestId?: string, supplierId?: string }} [filters]
+ * @param {{ estado?: string, requestId?: string|number, supplierId?: string|number }} [filters]
  */
 export async function getQuotes(filters = {}) {
-  let filtered = mockQuotes;
-  if (filters.estado) filtered = filtered.filter((q) => q.estado === filters.estado);
-  if (filters.requestId) filtered = filtered.filter((q) => q.requestId === filters.requestId);
-  if (filters.supplierId) filtered = filtered.filter((q) => q.supplierId === filters.supplierId);
-  return simulateNetwork(filtered.map(withClient));
-  // return apiClient.get('/cotizaciones', { params: filters }); // TODO: backend
+  const { ok, cotizaciones } = await apiClient.get('/cotizaciones', {
+    params: { estado: filters.estado, id_solicitud: filters.requestId, id_proveedor: filters.supplierId },
+  });
+  return ok ? cotizaciones.map(adaptQuote) : [];
 }
 
 /**
- * Cotizaciones de una sola solicitud, para la vista de comparación
- * (cuántos talleres cotizaron, cuál se mandó al cliente, etc).
+ * Cotizaciones de una sola solicitud (vista de comparación).
  *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/solicitudes/:id/cotizaciones
- *            (alternativa: GET /api/cotizaciones?requestId=:id — decidir
- *            cuál de las dos expone el backend)
- * Query:     (no aplica si se usa la ruta de arriba)
- * Body:      (no aplica)
- * Respuesta: Cotizacion[]
+ * GET /api/solicitudes/:id/cotizaciones — responde 404 con { error } si la
+ * solicitud todavía no tiene ninguna; se trata como lista vacía, no como
+ * falla (ver status que apiClient.js adjunta al Error).
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} requestId
+ * @param {string|number} requestId
  */
 export async function getQuotesByRequest(requestId) {
-  return simulateNetwork(getQuotesByRequestSync(requestId).map(withClient));
-  // return apiClient.get(`/solicitudes/${requestId}/cotizaciones`); // TODO: backend
+  try {
+    const cotizaciones = await apiClient.get(`/solicitudes/${requestId}/cotizaciones`);
+    return cotizaciones.map(adaptQuote);
+  } catch (error) {
+    if (error.status === 404) return [];
+    throw error;
+  }
 }
 
 /**
- * Obtiene el detalle de una cotización por id.
+ * Detalle de una cotización por id.
  *
- * ENDPOINT REAL
- * -------------
- * Método:    GET
- * Ruta:      /api/cotizaciones/:id
- * Query:     (no aplica)
- * Body:      (no aplica)
- * Respuesta: Cotizacion → ver el shape completo documentado en createQuote más abajo
+ * GET /api/cotizaciones/:id
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} id
+ * @param {string|number} id
  */
 export async function getQuoteById(id) {
-  const quote = mockQuotes.find((q) => q.id === id) || null;
-  return simulateNetwork(quote ? withClient(quote) : null);
-  // return apiClient.get(`/cotizaciones/${id}`); // TODO: backend
+  try {
+    const { cotizacion } = await apiClient.get(`/cotizaciones/${id}`);
+    return adaptQuote(cotizacion);
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
 }
 
 /**
- * Registra la cotización de un taller para una solicitud existente.
+ * Registra la cotización de un proveedor para una solicitud existente.
  *
- * ENDPOINT REAL
- * -------------
- * Método:    POST
- * Ruta:      /api/cotizaciones
- * Query:     (no aplica)
- * Body:      {
- *              id_solicitud, id_proveedor,
- *              items: [{ titulo, descripcion, cantidad, precio_unitario }],
- *              notas,
- *              tarifa_intermediacion: { valor, porcentaje },
- *              subtotal, isv, total
- *            }
- * Respuesta: Cotizacion → la cotización recién creada, con su id real
+ * POST /api/cotizaciones  body: { id_solicitud, id_proveedor, total, estado, descripcion, detalles }
  *
- * NOTA: subtotal/isv/total los calcula hoy el front (ver AddQuoteModal.jsx)
- * y se mandan ya calculados — pendiente decidir si el backend los recalcula
- * y valida o confía en lo que manda el front (ver "Pendiente de decidir"
- * en ENDPOINTS_CHECKLIST.md).
- *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {{ requestId: string, supplierId: string, supplier: string, items: object[], notes?: string, intermediationFee?: { value: number, percent: number }, subtotal?: number, tax?: number }} payload
+ * @param {{ requestId: string|number, supplierId: string|number, items: object[], notes?: string, total: number }} payload
  */
 export async function createQuote(payload) {
-  const newQuote = {
-    id: `COT-2024-${String(Math.floor(Math.random() * 900 + 100))}`,
-    date: new Date().toISOString().slice(0, 10),
-    total: payload.items?.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0) ?? 0,
+  const { cotizacion } = await apiClient.post('/cotizaciones', {
+    id_solicitud: payload.requestId,
+    id_proveedor: payload.supplierId,
+    total: payload.total,
     estado: 'pendiente',
-    sentToClient: false,
-    discarded: false,
-    ...payload,
-  };
-  mockQuotes = [newQuote, ...mockQuotes];
-  return simulateNetwork(withClient(newQuote));
-  // return apiClient.post('/cotizaciones', payload); // TODO: backend
+    descripcion: payload.notes,
+    tarifa_intermediacion: payload.intermediationFee?.value ?? 0,
+    tarifa_porcentaje: payload.intermediationFee?.percent ?? 0,
+    detalles: buildDetalles(payload.items),
+  });
+  return adaptQuote(cotizacion);
 }
 
 /**
- * Actualiza una cotización existente (líneas, notas o total).
+ * Actualiza una cotización existente (líneas, notas, total, o solo la
+ * bandera `descartada` al descartar/restaurar desde la comparación).
  *
- * ENDPOINT REAL
- * -------------
- * Método:    PUT
- * Ruta:      /api/cotizaciones/:id
- * Query:     (no aplica)
- * Body:      mismo shape que el POST de createQuote, con los campos a cambiar
- * Respuesta: Cotizacion → ya actualizada
+ * PUT /api/cotizaciones/:id  body: subconjunto de { id_solicitud, id_proveedor, total, estado, descripcion, detalles, descartada }
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} id
+ * @param {string|number} id
  * @param {object} payload
  */
 export async function updateQuote(id, payload) {
-  mockQuotes = mockQuotes.map((q) => (q.id === id ? { ...q, ...payload } : q));
-  const updated = mockQuotes.find((q) => q.id === id);
-  return simulateNetwork(updated ? withClient(updated) : null);
-  // return apiClient.put(`/cotizaciones/${id}`, payload); // TODO: backend
+  const body = {};
+  if (payload.requestId !== undefined) body.id_solicitud = payload.requestId;
+  if (payload.supplierId !== undefined) body.id_proveedor = payload.supplierId;
+  if (payload.total !== undefined) body.total = payload.total;
+  if (payload.estado !== undefined) body.estado = payload.estado;
+  if (payload.notes !== undefined) body.descripcion = payload.notes;
+  if (payload.discarded !== undefined) body.descartada = payload.discarded;
+  if (payload.sentToClient !== undefined) body.enviada_cliente = payload.sentToClient;
+  if (payload.items !== undefined) body.detalles = buildDetalles(payload.items);
+
+  const { cotizacion } = await apiClient.put(`/cotizaciones/${id}`, body);
+  return adaptQuote(cotizacion);
 }
 
 /**
- * Marca esta cotización como "la elegida" para mandar al cliente. Solo
- * puede haber una cotización activa (sentToClient) por solicitud a la vez,
- * así que se desmarca cualquier otra que lo estuviera (p. ej. si antes se
- * mandó la de un taller, lo rechazaron, y ahora se manda la de otro).
+ * Marca esta cotización como "la elegida" para mandar al cliente (el
+ * backend desmarca cualquier otra de la misma solicitud).
  *
- * NOTA: `sentToClient`/`discarded` son banderas solo de front (ver
- * mocks/quotes.js). Hoy no existen en el modelo Cotizacion del backend —
- * habría que agregar algo equivalente cuando se conecte de verdad.
+ * PATCH /api/cotizaciones/:id/enviar-a-cliente
  *
- * ENDPOINT REAL
- * -------------
- * Método:    PATCH
- * Ruta:      /api/cotizaciones/:id/enviar-a-cliente
- * Query:     (no aplica)
- * Body:      (no aplica, la acción la indica la ruta)
- * Respuesta: Cotizacion → ya marcada como enviada
- *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} id
+ * @param {string|number} id
  */
 export async function sendQuoteToClient(id) {
-  const target = mockQuotes.find((q) => q.id === id);
-  if (!target) return simulateNetwork(null);
-  mockQuotes = mockQuotes.map((q) => {
-    if (q.id === id) return { ...q, sentToClient: true, estado: 'pendiente' };
-    if (q.requestId === target.requestId) return { ...q, sentToClient: false };
-    return q;
-  });
-  const updated = mockQuotes.find((q) => q.id === id);
-  return simulateNetwork(withClient(updated));
-  // return apiClient.patch(`/cotizaciones/${id}/enviar-a-cliente`); // TODO: backend
+  const { cotizacion } = await apiClient.patch(`/cotizaciones/${id}/enviar-a-cliente`);
+  return adaptQuote(cotizacion);
 }
 
 /**
  * El cliente acepta la cotización que se le mandó.
  *
- * ENDPOINT REAL
- * -------------
- * Método:    PUT
- * Ruta:      /api/cotizaciones/:id/aprobar
- * Query:     (no aplica)
- * Body:      (no aplica)
- * Respuesta: Cotizacion → con estado 'aprobada'
+ * PUT /api/cotizaciones/:id/aprobar
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} id
+ * @param {string|number} id
  */
 export async function approveQuote(id) {
-  return updateQuote(id, { estado: 'aprobada' });
-  // return apiClient.put(`/cotizaciones/${id}/aprobar`); // TODO: backend
+  const { cotizacion } = await apiClient.put(`/cotizaciones/${id}/aprobar`);
+  return adaptQuote(cotizacion);
 }
 
 /**
  * El cliente rechaza la cotización que se le mandó.
  *
- * ENDPOINT REAL
- * -------------
- * Método:    PUT
- * Ruta:      /api/cotizaciones/:id/rechazar
- * Query:     (no aplica)
- * Body:      (no aplica)
- * Respuesta: Cotizacion → con estado 'rechazada'
+ * PUT /api/cotizaciones/:id/rechazar
  *
- * Cómo conectarlo: ver GUIA_CONEXION_BACKEND.md
- *
- * @param {string} id
+ * @param {string|number} id
  */
 export async function rejectQuote(id) {
-  return updateQuote(id, { estado: 'rechazada' });
-  // return apiClient.put(`/cotizaciones/${id}/rechazar`); // TODO: backend
+  const { cotizacion } = await apiClient.put(`/cotizaciones/${id}/rechazar`);
+  return adaptQuote(cotizacion);
 }
 
 /**
- * Descarta manualmente la cotización de un taller (p. ej. perdió la
- * comparación contra otro). Solo aplica mientras no se haya mandado al cliente.
+ * Descarta manualmente la cotización de un proveedor en la vista de
+ * comparación. Reusa el PUT genérico de updateQuote, solo cambia la
+ * bandera `descartada`.
  *
- * No necesita su propio endpoint: reusa el PUT genérico de updateQuote
- * (arriba) solo para cambiar la bandera `discarded`. No hay nada que
- * conectar aparte de lo que ya se conecta en updateQuote.
+ * @param {string|number} id
  */
 export async function discardQuote(id) {
   return updateQuote(id, { discarded: true });
 }
 
 /**
- * Revierte el descarte de una cotización, para volverla a considerar.
+ * Revierte el descarte de una cotización.
  *
- * Igual que discardQuote, reusa updateQuote — no tiene endpoint propio.
+ * @param {string|number} id
  */
 export async function restoreQuote(id) {
   return updateQuote(id, { discarded: false });

@@ -14,7 +14,15 @@ import './WorkOrderFormModal.css';
  * initialQuoteId precarga la cotización cuando se llega desde el botón
  * "Ir a Órdenes de Trabajo" de Solicitudes (ver WorkOrders.jsx).
  */
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// La orden se crea con fecha_inicio = hoy, y el backend exige que
+// fecha_vencimiento sea POSTERIOR a fecha_inicio (no solo "no anterior") —
+// ver createProyecto en proyectosController.js. Por eso la fecha mínima
+// seleccionable es mañana, no hoy.
+const tomorrowStr = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
 
 export default function WorkOrderFormModal({ usedQuoteIds = [], initialQuoteId = '', onClose, onSave }) {
   const [approvedQuotes, setApprovedQuotes] = useState([]);
@@ -26,25 +34,30 @@ export default function WorkOrderFormModal({ usedQuoteIds = [], initialQuoteId =
 
   useEffect(() => {
     getQuotes({ estado: 'aprobada' }).then((data) => {
-      setApprovedQuotes(data.filter((q) => !usedQuoteIds.includes(q.id)));
+      const usedIds = usedQuoteIds.map(String);
+      setApprovedQuotes(data.filter((q) => !usedIds.includes(String(q.id))));
       setLoading(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const selectedQuote = approvedQuotes.find((q) => q.id === quoteId);
-  const minDate = todayStr();
+  // q.id viene del backend como número; quoteId puede llegar como string
+  // (lo que pone el <select> en su onChange) o como número si llega
+  // precargado desde location.state (ver WorkOrders.jsx) — se compara como
+  // texto para que ambos casos calcen.
+  const selectedQuote = approvedQuotes.find((q) => String(q.id) === String(quoteId));
+  const minDate = tomorrowStr();
 
   function handleDueDateChange(value) {
     setDueDate(value);
-    setDateError(value && value < minDate ? 'La fecha límite no puede ser anterior a hoy.' : '');
+    setDateError(value && value < minDate ? 'La fecha límite debe ser posterior a hoy.' : '');
   }
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!quoteId || !dueDate) return;
     if (dueDate < minDate) {
-      setDateError('La fecha límite no puede ser anterior a hoy.');
+      setDateError('La fecha límite debe ser posterior a hoy.');
       return;
     }
     onSave({ quoteId, description, dueDate });

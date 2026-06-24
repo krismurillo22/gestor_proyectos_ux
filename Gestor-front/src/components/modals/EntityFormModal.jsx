@@ -6,23 +6,16 @@ import './EntityFormModal.css';
  * Modal genérico para crear un cliente o un proveedor/taller (los dos
  * comparten los mismos campos básicos de contacto).
  *
- * NOTA backend: los modelos Cliente/Proveedor hoy solo tienen
- * nombre + rtn + activo, y el teléfono es una lista aparte
- * (TelefonoCliente/TelefonoProveedor, varios por cliente) — no existen
- * contacto/email/dirección todavía. Se dejan esos campos en el form porque
- * son información real que la empresa necesita, pero falta agregarlos al
- * modelo (y decidir si el teléfono pasa a ser una lista) antes de conectar
- * esto de verdad. RTN sí existe en el backend.
+ * NOTA backend: nombre y RTN son los únicos obligatorios; contacto/correo/
+ * teléfono/dirección se guardan como columnas directas en Cliente/Proveedor
+ * pero quedan opcionales porque no toda empresa tiene esos datos a mano al
+ * registrarla.
  *
  * @param {{ kind: 'cliente' | 'proveedor', onClose: Function, onSave: Function }} props
  */
 const REQUIRED_FIELDS = [
   { key: 'name', label: 'Nombre de la empresa' },
-  { key: 'contact', label: 'Nombre de contacto' },
   { key: 'rtn', label: 'RTN' },
-  { key: 'email', label: 'Correo' },
-  { key: 'phone', label: 'Teléfono' },
-  { key: 'address', label: 'Dirección' },
 ];
 
 function FieldError({ message }) {
@@ -30,13 +23,25 @@ function FieldError({ message }) {
   return <p className="form-error-text">{message}</p>;
 }
 
-export default function EntityFormModal({ kind, onClose, onSave }) {
-  const [name, setName] = useState('');
-  const [rtn, setRtn] = useState('');
-  const [contact, setContact] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+const RTN_PATTERN = /^\d{4}-\d{4}-\d{5}$/;
+
+// El backend exige el RTN en formato hondureño 0000-0000-00000 (13 dígitos).
+// Si no cumple exactamente ese patrón, responde 400. Por eso formateamos
+// mientras el usuario escribe en vez de solo avisar después de enviar.
+function formatRtn(rawValue) {
+  const digits = rawValue.replace(/\D/g, '').slice(0, 13);
+  const parts = [digits.slice(0, 4), digits.slice(4, 8), digits.slice(8, 13)];
+  return parts.filter(Boolean).join('-');
+}
+
+export default function EntityFormModal({ kind, onClose, onSave, entity }) {
+  const isEditing = Boolean(entity);
+  const [name, setName] = useState(entity?.name ?? '');
+  const [rtn, setRtn] = useState(entity?.rtn ?? '');
+  const [contact, setContact] = useState(entity?.contact ?? '');
+  const [email, setEmail] = useState(entity?.email ?? '');
+  const [phone, setPhone] = useState(entity?.phone ?? '');
+  const [address, setAddress] = useState(entity?.address ?? '');
   const [errors, setErrors] = useState({});
 
   const values = { name, rtn, contact, email, phone, address };
@@ -50,6 +55,9 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
     REQUIRED_FIELDS.forEach(({ key, label }) => {
       if (!values[key].trim()) next[key] = `${label} es obligatorio.`;
     });
+    if (!next.rtn && rtn.trim() && !RTN_PATTERN.test(rtn.trim())) {
+      next.rtn = 'El RTN debe tener el formato 0000-0000-00000.';
+    }
     return next;
   }
 
@@ -76,7 +84,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
             <span className="modal-icon">
               <Building2 size={18} />
             </span>
-            <h2 className="page-title">{kind === 'cliente' ? 'Nuevo Cliente' : 'Nuevo Proveedor'}</h2>
+            <h2 className="page-title">{isEditing ? (kind === 'cliente' ? 'Editar Cliente' : 'Editar Proveedor') : (kind === 'cliente' ? 'Nuevo Cliente' : 'Nuevo Proveedor')}</h2>
           </div>
           <button type="button" className="btn-icon" onClick={onClose}>
             <X size={18} />
@@ -105,7 +113,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
 
             <div className="form-group">
               <label className="form-label" htmlFor="entity-contact">
-                Nombre de contacto
+                Nombre de contacto <span className="form-help">(opcional)</span>
               </label>
               <input
                 id="entity-contact"
@@ -116,23 +124,25 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
                   clearError('contact');
                 }}
                 aria-invalid={Boolean(errors.contact)}
-                required
               />
               <FieldError message={errors.contact} />
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="entity-rtn">
-                RTN
+                RTN <span className="form-help">(formato 0000-0000-00000)</span>
               </label>
               <input
                 id="entity-rtn"
                 className={`form-input${errors.rtn ? ' form-input-error' : ''}`}
                 value={rtn}
                 onChange={(e) => {
-                  setRtn(e.target.value);
+                  setRtn(formatRtn(e.target.value));
                   clearError('rtn');
                 }}
+                placeholder="0801-1990-12345"
+                maxLength={15}
+                inputMode="numeric"
                 aria-invalid={Boolean(errors.rtn)}
                 required
               />
@@ -142,7 +152,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label" htmlFor="entity-email">
-                  Correo
+                  Correo <span className="form-help">(opcional)</span>
                 </label>
                 <input
                   id="entity-email"
@@ -154,13 +164,12 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
                     clearError('email');
                   }}
                   aria-invalid={Boolean(errors.email)}
-                  required
                 />
                 <FieldError message={errors.email} />
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="entity-phone">
-                  Teléfono
+                  Teléfono <span className="form-help">(opcional)</span>
                 </label>
                 <input
                   id="entity-phone"
@@ -171,7 +180,6 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
                     clearError('phone');
                   }}
                   aria-invalid={Boolean(errors.phone)}
-                  required
                 />
                 <FieldError message={errors.phone} />
               </div>
@@ -179,7 +187,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
 
             <div className="form-group">
               <label className="form-label" htmlFor="entity-address">
-                Dirección
+                Dirección <span className="form-help">(opcional)</span>
               </label>
               <input
                 id="entity-address"
@@ -190,7 +198,6 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
                   clearError('address');
                 }}
                 aria-invalid={Boolean(errors.address)}
-                required
               />
               <FieldError message={errors.address} />
             </div>
@@ -201,7 +208,7 @@ export default function EntityFormModal({ kind, onClose, onSave }) {
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary">
-              Guardar
+              {isEditing ? 'Guardar cambios' : 'Guardar'}
             </button>
           </div>
         </form>

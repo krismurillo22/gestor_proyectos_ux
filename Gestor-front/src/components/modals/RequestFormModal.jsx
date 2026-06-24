@@ -1,21 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Inbox } from 'lucide-react';
-import { clientsData } from '../../mocks/clients';
+import { getClients } from '../../services/clientsService';
 
 /**
  * Modal para registrar una nueva solicitud de cliente (punto de entrada
- * del flujo, antes de cotizar con ningún taller).
+ * del flujo, antes de cotizar con ningún taller). Los clientes se piden al
+ * backend al abrir el modal (antes venían de un mock estático) porque el
+ * backend necesita el id numérico real del cliente para crear la
+ * solicitud, no el id de texto que tenían los datos de prueba.
  * onSave recibe { clientId, client, description }.
  */
 export default function RequestFormModal({ onClose, onSave }) {
+  const [clients, setClients] = useState([]);
+  const [loadingClients, setLoadingClients] = useState(true);
   const [clientId, setClientId] = useState('');
   const [description, setDescription] = useState('');
 
+  useEffect(() => {
+    getClients().then((data) => {
+      setClients(data);
+      setLoadingClients(false);
+    });
+  }, []);
+
   function handleSubmit(e) {
     e.preventDefault();
-    const client = clientsData.find((c) => c.id === clientId);
+    const client = clients.find((c) => String(c.id) === String(clientId));
     if (!client || !description) return;
-    onSave({ clientId, client: client.name, description });
+    onSave({ clientId: client.id, client: client.name, description });
   }
 
   return (
@@ -44,10 +56,11 @@ export default function RequestFormModal({ onClose, onSave }) {
                 className="form-select"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
+                disabled={loadingClients}
                 required
               >
-                <option value="">Selecciona un cliente…</option>
-                {clientsData.map((c) => (
+                <option value="">{loadingClients ? 'Cargando clientes…' : 'Selecciona un cliente…'}</option>
+                {clients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>

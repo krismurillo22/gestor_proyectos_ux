@@ -40,8 +40,23 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-async function request(path, { method = 'GET', body, headers, ...rest } = {}) {
-  const response = await fetch(`${BASE_URL}${path}`, {
+/**
+ * Convierte un objeto plano en query string ("?clave=valor&...").
+ * Ignora valores undefined/null (para poder pasar siempre todas las claves
+ * de un filtro, aunque algunas estén vacías, sin que viajen como
+ * "?id_cliente=undefined" al backend).
+ */
+function buildQueryString(params) {
+  if (!params) return '';
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  if (entries.length === 0) return '';
+  const usp = new URLSearchParams();
+  entries.forEach(([key, value]) => usp.append(key, value));
+  return `?${usp.toString()}`;
+}
+
+async function request(path, { method = 'GET', body, headers, params, ...rest } = {}) {
+  const response = await fetch(`${BASE_URL}${path}${buildQueryString(params)}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
@@ -54,7 +69,18 @@ async function request(path, { method = 'GET', body, headers, ...rest } = {}) {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
-    throw new Error(errorBody?.message || `Error ${response.status} al llamar ${path}`);
+    // El backend (Gestor) no es consistente: unos controllers devuelven
+    // { error: '...' } en fallos, otros { message: '...' }, y el de
+    // cotizaciones usa { ok: false, msg: '...' } — revisamos los tres para
+    // no perder el mensaje real y caer siempre en el genérico.
+    const error = new Error(errorBody?.error || errorBody?.message || errorBody?.msg || `Error ${response.status} al llamar ${path}`);
+    // Varios controllers (solicitudes, clientes) responden 404 cuando una
+    // lista simplemente sale vacía, en vez de 200 con []. Se adjunta el
+    // status para que los services puedan distinguir "no hay datos" de un
+    // error real y degradar a lista vacía sin reventar (ver requestsService.js,
+    // clientsService.js, etc).
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;

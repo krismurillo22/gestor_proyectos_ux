@@ -1,0 +1,144 @@
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  max-width: 700px;
+}
+
+.report-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.report-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.report-card-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--border-radius-md);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.report-card-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.report-card-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.report-card-arrow {
+  margin-left: auto;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* breadcrumb */
+.report-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* filters */
+.report-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.report-select,
+.report-date,
+.report-search {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+}
+
+.report-select:focus,
+.report-date:focus,
+.report-search:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.report-search { min-width: 220px; }
+.report-date-sep { color: var(--color-text-secondary); font-size: 0.8rem; }
+
+/* summary cards */
+.report-summary {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.report-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1.1rem;
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-md);
+  min-width: 120px;
+}
+
+.report-stat-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.report-stat-value {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+/* table actions */
+.report-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+/* sortable headers */
+.report-th-sort {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.report-th-sort:hover {
+  color: var(--color-primary);
+}
+
+@media (max-width: 700px) {
+  .reports-grid { grid-template-columns: 1fr; }
+}

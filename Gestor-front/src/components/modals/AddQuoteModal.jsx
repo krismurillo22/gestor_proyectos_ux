@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { X, FileText, Trash2, Plus } from 'lucide-react';
-import { suppliersData } from '../../mocks/suppliers';
+import { getSuppliers } from '../../services/suppliersService';
 import './AddQuoteModal.css';
 
-const emptyItem = () => ({ title: '', description: '', quantity: 1, unitPrice: 0 });
+const emptyItem = () => ({ title: '', description: '', quantity: 1, unitPrice: '' });
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -43,18 +43,30 @@ function FieldError({ message }) {
  * subtotal, tax, total }.
  */
 export default function AddQuoteModal({ onClose, onSave }) {
+  const [suppliers, setSuppliers] = useState([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [supplierId, setSupplierId] = useState('');
   const [items, setItems] = useState([emptyItem()]);
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState({});
+
+  // Los proveedores se piden al backend al abrir el modal (antes venían de
+  // un mock estático) porque el backend necesita el id numérico real del
+  // proveedor para crear la cotización.
+  useEffect(() => {
+    getSuppliers().then((data) => {
+      setSuppliers(data);
+      setLoadingSuppliers(false);
+    });
+  }, []);
 
   // 'value' o 'percent': cuál de los dos campos de la tarifa fue el último
   // que el usuario editó a mano. El otro se recalcula a partir de ese cada
   // vez que cambia el subtotal (p. ej. si agrega una línea después de fijar
   // la tarifa), para no perder lo que sí escribió a propósito.
   const [feeMode, setFeeMode] = useState('value');
-  const [feeValue, setFeeValue] = useState(0);
-  const [feePercent, setFeePercent] = useState(0);
+  const [feeValue, setFeeValue] = useState('');
+  const [feePercent, setFeePercent] = useState('');
 
   const subtotal = items.reduce((sum, it) => sum + Number(it.quantity || 0) * Number(it.unitPrice || 0), 0);
   const taxBase = subtotal + Number(feeValue || 0);
@@ -92,18 +104,20 @@ export default function AddQuoteModal({ onClose, onSave }) {
   }
 
   function onChangeFeeValue(value) {
-    const numValue = Number(value) || 0;
     setFeeMode('value');
-    setFeeValue(numValue);
-    setFeePercent(subtotal > 0 ? round2((numValue / subtotal) * 100) : 0);
+    setFeeValue(value);
+    const numValue = Number(value) || 0;
+    setFeePercent(value === '' ? '' : subtotal > 0 ? round2((numValue / subtotal) * 100) : 0);
     if (errors.feeValue) setErrors((prev) => ({ ...prev, feeValue: undefined }));
   }
 
   function onChangeFeePercent(value) {
-    const numPercent = Number(value) || 0;
+    // Limpiar ceros iniciales (ej. "015" -> "15") excepto cuando el campo está vacío
+    const clean = value === '' ? '' : String(Number(value) || 0);
     setFeeMode('percent');
-    setFeePercent(numPercent);
-    setFeeValue(round2((numPercent / 100) * subtotal));
+    setFeePercent(clean);
+    const numPercent = Number(clean) || 0;
+    setFeeValue(clean === '' ? '' : round2((numPercent / 100) * subtotal));
     if (errors.feeValue) setErrors((prev) => ({ ...prev, feeValue: undefined }));
   }
 
@@ -135,10 +149,10 @@ export default function AddQuoteModal({ onClose, onSave }) {
     const validationErrors = validate();
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
-    const supplier = suppliersData.find((s) => s.id === supplierId);
+    const supplier = suppliers.find((s) => String(s.id) === String(supplierId));
     if (!supplier) return;
     onSave({
-      supplierId,
+      supplierId: supplier.id,
       supplier: supplier.name,
       items,
       notes,
@@ -179,10 +193,11 @@ export default function AddQuoteModal({ onClose, onSave }) {
                   if (errors.supplier) setErrors((prev) => ({ ...prev, supplier: undefined }));
                 }}
                 aria-invalid={Boolean(errors.supplier)}
+                disabled={loadingSuppliers}
                 required
               >
-                <option value="">Selecciona un proveedor…</option>
-                {suppliersData.map((s) => (
+                <option value="">{loadingSuppliers ? 'Cargando proveedores…' : 'Selecciona un proveedor…'}</option>
+                {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -236,7 +251,7 @@ export default function AddQuoteModal({ onClose, onSave }) {
                           step="1"
                           className={`form-input${errors.items?.[index]?.quantity ? ' form-input-error' : ''}`}
                           value={item.quantity}
-                          onChange={(e) => updateItem(index, 'quantity', Math.round(Number(e.target.value) || 0))}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value === '' ? '' : Math.round(Number(e.target.value) || 0))}
                           aria-invalid={Boolean(errors.items?.[index]?.quantity)}
                           required
                         />
@@ -250,7 +265,7 @@ export default function AddQuoteModal({ onClose, onSave }) {
                           step="0.01"
                           className={`form-input${errors.items?.[index]?.unitPrice ? ' form-input-error' : ''}`}
                           value={item.unitPrice}
-                          onChange={(e) => updateItem(index, 'unitPrice', Number(e.target.value))}
+                          onChange={(e) => updateItem(index, 'unitPrice', e.target.value === '' ? '' : e.target.value)}
                           aria-invalid={Boolean(errors.items?.[index]?.unitPrice)}
                           required
                         />

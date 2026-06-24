@@ -1,3 +1,118 @@
 /* La mayoría del estilo de esta página vive en src/styles/shared.css
    (.tabs, .table, .badge, etc). Este archivo queda para overrides
    específicos de Cotizaciones si llegan a necesitarse. */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-card {
+  border-top: 3px solid transparent;
+  transition: box-shadow 0.15s;
+}
+
+.kpi-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+.kpi-card-sky     { border-top-color: var(--color-chart-2); }
+.kpi-card-amber   { border-top-color: var(--color-warning); }
+.kpi-card-emerald { border-top-color: var(--color-success); }
+.kpi-card-primary { border-top-color: var(--color-primary); }
+
+.kpi-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.kpi-label {
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+}
+
+.kpi-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi-icon-sky     { background: color-mix(in srgb, var(--color-chart-2) 18%, transparent); color: var(--color-chart-2); }
+.kpi-icon-amber   { background: color-mix(in srgb, var(--color-warning) 18%, transparent); color: var(--color-warning); }
+.kpi-icon-emerald { background: color-mix(in srgb, var(--color-success) 18%, transparent); color: var(--color-success); }
+.kpi-icon-primary { background: color-mix(in srgb, var(--color-primary) 18%, transparent); color: var(--color-primary); }
+
+.kpi-value {
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1rem;
+}
+
+/* â”€â”€ PrÃ³ximos a vencer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.deadline-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.deadline-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.deadline-item:last-child {
+  border-bottom: none;
+}
+
+.deadline-item-clickable {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.5rem;
+  transition: background 0.12s;
+}
+
+.deadline-item-clickable:hover {
+  background: var(--color-muted);
+}
+
+.deadline-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.deadline-urgency-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.deadline-urgency-dot.badge-red    { background: var(--color-danger); }
+.deadline-urgency-dot.badge-amber  { background: var(--color-warning); }
+.deadline-urgency-dot.badge-emerald { background: var(--color-success); }
+
+.deadline-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-grid { grid-template-columns: 1fr; }
+}

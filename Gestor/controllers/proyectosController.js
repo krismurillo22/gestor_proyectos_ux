@@ -1,14 +1,37 @@
 'use strict';
 
-const { Proyecto, Cotizacion, Evaluacion, sequelize } = require('../models');
+const { Proyecto, Cotizacion, Evaluacion, Solicitud, Proveedor, Cliente, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // Helpers de validación de fechas y estados
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // Debe coincidir exactamente con el ENUM real de la columna Proyectos.estado
-// (ver models/proyecto.js y la migración create-proyecto): no incluye 'pendiente',
-// sí incluye 'vencido'.
-const estadosValidos = ['en_progreso', 'completado', 'cancelado', 'vencido'];
+// (ver models/proyecto.js y la migración add-pendiente-to-proyecto-estado).
+// No existe 'control_calidad': el control de calidad final se hace
+// registrando la Evaluacion antes de pasar a 'completado'.
+const estadosValidos = ['pendiente', 'en_progreso', 'completado', 'cancelado', 'vencido'];
+
+// Include reutilizable para que el front tenga, sin una segunda llamada, todo
+// lo que necesita mostrar en el kanban/detalle de órdenes de trabajo: el
+// nombre del proveedor (taller) y del cliente que originó el trabajo, además
+// de la evaluación final si ya existe.
+function buildProyectoIncludes() {
+  return [
+    {
+      model: Cotizacion,
+      as: 'cotizacion',
+      include: [
+        { model: Proveedor, as: 'proveedor' },
+        {
+          model: Solicitud,
+          as: 'solicitud',
+          include: [{ model: Cliente, as: 'cliente' }],
+        },
+      ],
+    },
+    { model: Evaluacion, as: 'evaluacion', required: false },
+  ];
+}
 
 const isValidDateString = (s) => typeof s === 'string' && DATE_RE.test(s) && !Number.isNaN(new Date(s).getTime());
 const toDateOnly = (s) => {
@@ -22,22 +45,52 @@ const isPositiveInteger = (v) => {
     return Number.isInteger(n) && n > 0;
 };
 
-// GET /api/proyectos
+// GET /api/proyectos?estado=&id_cliente=&id_proveedor=
+// id_cliente e id_proveedor filtran a través de la cotización asociada
+// (Proyecto -> Cotizacion -> Proveedor, y Proyecto -> Cotizacion -> Solicitud -> Cliente).
 const getProyectos = async (req, res) => {
     try {
-        const proyectos = await Proyecto.findAll({
-            include: [
-                {
-                    model: Cotizacion,
-                    as: 'cotizacion'
-                },
-            ],
-        });
+        const { estado, id_cliente, id_proveedor } = req.query;
+        const where = { archivado: false };  // nunca mostrar archivados en el kanban
 
-        if (!proyectos || proyectos.length === 0) {
-            return res.json({ message: 'No hay resultados' });
+        if (estado) {
+            if (!estadosValidos.includes(estado)) {
+                return res.status(400).json({ error: 'Estado inválido. Los valores permitidos son: ' + estadosValidos.join(', ') });
+            }
+            where.estado = estado;
         }
 
+        if (id_proveedor !== undefined && !isPositiveInteger(id_proveedor)) {
+            return res.status(400).json({ error: 'id_proveedor debe ser un número entero positivo' });
+        }
+        if (id_cliente !== undefined && !isPositiveInteger(id_cliente)) {
+            return res.status(400).json({ error: 'id_cliente debe ser un número entero positivo' });
+        }
+
+        const includes = buildProyectoIncludes();
+        const cotizacionInclude = includes[0];
+
+        if (id_proveedor !== undefined) {
+            cotizacionInclude.where = { id_proveedor };
+            cotizacionInclude.required = true;
+        }
+
+        if (id_cliente !== undefined) {
+            const solicitudInclude = cotizacionInclude.include.find((i) => i.as === 'solicitud');
+            solicitudInclude.where = { id_cliente };
+            solicitudInclude.required = true;
+            cotizacionInclude.required = true;
+        }
+
+        const proyectos = await Proyecto.findAll({
+            where,
+            include: includes,
+        });
+
+        // Importante: devolver siempre un arreglo (aunque esté vacío), no un
+        // objeto { message: ... } — el front espera Proyecto[] para mapearlo
+        // directo en el kanban, y con la base de datos recién creada (sin
+        // datos todavía) este es el caso normal, no un error.
         res.json(proyectos);
     } catch(error){
         console.error('Error en getProyectos:', error);
@@ -55,12 +108,7 @@ const getProyectoById = async (req,res) => {
 
         const proyecto = await Proyecto.findOne({
             where: {id_proyecto: id},
-            include: [
-                {
-                    model: Cotizacion,
-                    as: 'cotizacion'
-                }
-            ]
+            include: buildProyectoIncludes(),
         });
         if (!proyecto){
             return res.status(404).json({error: `El proyecto con ID ${id} no existe` });
@@ -158,7 +206,10 @@ const createProyecto = async(req,res) => {
         }
 
         // Validar existencia de cotización
-        const cot = await Cotizacion.findOne({ where: { id: id_cotizacion } });
+        // OJO: la PK real de Cotizacion es id_cotizacion, no id (ver
+        // models/cotizacion.js) — usar { id: ... } aquí hacía que esta
+        // consulta fallara siempre con un error de columna inexistente.
+        const cot = await Cotizacion.findOne({ where: { id_cotizacion } });
         if (!cot){
             return res.status(404).json({ error: `La cotización con ID ${id_cotizacion} no existe` });
         }
@@ -207,7 +258,7 @@ const createProyecto = async(req,res) => {
             fecha_inicio,
             fecha_vencimiento,
             fecha_fin_real: fecha_fin_real ?? null,
-            estado: estado || 'en_progreso'
+            estado: estado || 'pendiente'
         });
 
         res.status(201).json({
@@ -335,14 +386,9 @@ const getCotizacionesProyecto = async(req,res) => {
         if (proyecto.cotizacion) {
             resultados = Array.isArray(proyecto.cotizacion) ? proyecto.cotizacion : [proyecto.cotizacion];
         } else {
-            // Fallback: buscar por posible nombre de PK en Cotizacion (id o id_cotizacion)
+            // Fallback (la PK de Cotizacion es id_cotizacion, no id)
             const cotizacion = await Cotizacion.findOne({
-                where: {
-                    [Op.or]: [
-                        { id: proyecto.id_cotizacion },
-                        { id_cotizacion: proyecto.id_cotizacion }
-                    ]
-                }
+                where: { id_cotizacion: proyecto.id_cotizacion }
             });
             if (cotizacion) resultados = [cotizacion];
         }
@@ -398,8 +444,9 @@ const updateProyecto = async(req,res) => {
         }
 
         // Si se proporciona id_cotizacion, verificar existencia
+        // (mismo fix que en createProyecto: la PK es id_cotizacion, no id)
         if (id_cotizacion){
-            const cot = await Cotizacion.findOne({ where: { id: id_cotizacion } });
+            const cot = await Cotizacion.findOne({ where: { id_cotizacion } });
             if (!cot){
                 return res.status(404).json({ error: `La cotización con ID ${id_cotizacion} no existe` });
             }
@@ -460,10 +507,59 @@ const updateProyecto = async(req,res) => {
     }
 };
 
+// PATCH /api/proyectos/:id/archivar
+const archivarProyecto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isPositiveInteger(id)) return res.status(400).json({ error: 'ID inválido' });
+        const proyecto = await Proyecto.findOne({ where: { id_proyecto: id } });
+        if (!proyecto) return res.status(404).json({ error: 'Proyecto no encontrado' });
+        if (proyecto.estado !== 'completado') {
+            return res.status(409).json({ error: 'Solo se pueden archivar órdenes completadas' });
+        }
+        await proyecto.update({ archivado: true });
+        res.json({ message: 'Orden archivada exitosamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// PATCH /api/proyectos/:id/desarchivar
+const desarchivarProyecto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isPositiveInteger(id)) return res.status(400).json({ error: 'ID inválido' });
+        const proyecto = await Proyecto.findOne({ where: { id_proyecto: id, archivado: true } });
+        if (!proyecto) return res.status(404).json({ error: 'Proyecto no encontrado o no está archivado' });
+        await proyecto.update({ archivado: false });
+        res.json({ message: 'Orden desarchivada exitosamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// GET /api/proyectos/archivados
+const getProyectosArchivados = async (req, res) => {
+    try {
+        const includes = buildProyectoIncludes();
+        const proyectos = await Proyecto.findAll({
+            where: { archivado: true },
+            include: includes,
+            order: [['updatedAt', 'DESC']],
+        });
+        res.json(proyectos);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getProyectos,
     getProyectoById,
     updateProyectoEstado,
+    archivarProyecto,
+    desarchivarProyecto,
+    getProyectosArchivados,
     desactivarProyecto,
     createProyecto,
     filtrarProyecto,
