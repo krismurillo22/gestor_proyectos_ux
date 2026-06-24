@@ -1,28 +1,55 @@
 'use strict';
 
+const { Op } = require('sequelize');
 const { Proveedor, TelefonoProveedor, Cotizacion, Proyecto, Evaluacion } = require('../models');
+
+const INACTIVO_PREFIX = '[INACTIVO]';
+
+const whereActivo = {
+  nombre: {
+    [Op.notLike]: `${INACTIVO_PREFIX}%`,
+  },
+};
+
+const estaInactivo = (proveedor) => {
+  return proveedor.nombre?.startsWith(INACTIVO_PREFIX);
+};
 
 // GET /api/proveedores
 const getProveedores = async (req, res) => {
   try {
     const proveedores = await Proveedor.findAll({
+      where: whereActivo,
       include: [
         {
           model: TelefonoProveedor,
           as: 'telefonos',
         },
       ],
+      order: [['id_proveedor', 'DESC']],
     });
+
+    if (proveedores.length === 0) {
+      return res.status(204).send();
+    }
+
     res.json(proveedores);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al obtener proveedores',
+      detalle: error.message,
+    });
   }
 };
 
 // GET /api/proveedores/:id
 const getProveedorById = async (req, res) => {
   try {
-    const proveedor = await Proveedor.findByPk(req.params.id, {
+    const proveedor = await Proveedor.findOne({
+      where: {
+        id_proveedor: req.params.id,
+        ...whereActivo,
+      },
       include: [
         {
           model: TelefonoProveedor,
@@ -36,12 +63,17 @@ const getProveedorById = async (req, res) => {
     });
 
     if (!proveedor) {
-      return res.status(404).json({ error: 'Proveedor no encontrado' });
+      return res.status(404).json({
+        error: 'Proveedor no encontrado o inactivo',
+      });
     }
 
     res.json(proveedor);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al obtener proveedor',
+      detalle: error.message,
+    });
   }
 };
 
@@ -51,7 +83,30 @@ const createProveedor = async (req, res) => {
     const { nombre, rtn, contacto, correo, telefono, direccion } = req.body;
 
     if (!nombre) {
-      return res.status(400).json({ error: 'El nombre es requerido' });
+      return res.status(400).json({
+        error: 'El nombre es requerido',
+      });
+    }
+
+    if (nombre.startsWith(INACTIVO_PREFIX)) {
+      return res.status(400).json({
+        error: `El nombre no puede iniciar con ${INACTIVO_PREFIX}`,
+      });
+    }
+
+    if (rtn) {
+      const proveedorExistente = await Proveedor.findOne({
+        where: {
+          rtn,
+          ...whereActivo,
+        },
+      });
+
+      if (proveedorExistente) {
+        return res.status(400).json({
+          error: 'Ya existe un proveedor activo con este RTN',
+        });
+      }
     }
 
     const proveedor = await Proveedor.create({
@@ -68,28 +123,63 @@ const createProveedor = async (req, res) => {
       data: proveedor,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al crear proveedor',
+      detalle: error.message,
+    });
   }
 };
 
-// PUT /api/proveedores/:id
+// PATCH /api/proveedores/:id
 const updateProveedor = async (req, res) => {
   try {
     const proveedor = await Proveedor.findByPk(req.params.id);
 
-    if (!proveedor) {
-      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    if (!proveedor || estaInactivo(proveedor)) {
+      return res.status(404).json({
+        error: 'Proveedor no encontrado o inactivo',
+      });
     }
 
     const { nombre, rtn, contacto, correo, telefono, direccion } = req.body;
 
+    if (nombre !== undefined && !nombre) {
+      return res.status(400).json({
+        error: 'El nombre no puede estar vacío',
+      });
+    }
+
+    if (nombre && nombre.startsWith(INACTIVO_PREFIX)) {
+      return res.status(400).json({
+        error: `El nombre no puede iniciar con ${INACTIVO_PREFIX}`,
+      });
+    }
+
+    if (rtn !== undefined && rtn) {
+      const proveedorExistente = await Proveedor.findOne({
+        where: {
+          rtn,
+          id_proveedor: {
+            [Op.ne]: req.params.id,
+          },
+          ...whereActivo,
+        },
+      });
+
+      if (proveedorExistente) {
+        return res.status(400).json({
+          error: 'Ya existe otro proveedor activo con este RTN',
+        });
+      }
+    }
+
     await proveedor.update({
-      nombre,
-      rtn,
-      contacto: contacto?.trim() || null,
-      correo: correo?.trim() || null,
-      telefono: telefono?.trim() || null,
-      direccion: direccion?.trim() || null,
+      ...(nombre !== undefined && { nombre }),
+      ...(rtn !== undefined && { rtn }),
+      ...(contacto !== undefined && { contacto: contacto?.trim() || null }),
+      ...(correo !== undefined && { correo: correo?.trim() || null }),
+      ...(telefono !== undefined && { telefono: telefono?.trim() || null }),
+      ...(direccion !== undefined && { direccion: direccion?.trim() || null }),
     });
 
     res.json({
@@ -97,7 +187,10 @@ const updateProveedor = async (req, res) => {
       data: proveedor,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al actualizar proveedor',
+      detalle: error.message,
+    });
   }
 };
 
@@ -107,34 +200,47 @@ const deleteProveedor = async (req, res) => {
     const proveedor = await Proveedor.findByPk(req.params.id);
 
     if (!proveedor) {
-      return res.status(404).json({ error: 'Proveedor no encontrado' });
-    }
-
-    const cotizaciones = await Cotizacion.count({
-      where: { id_proveedor: req.params.id },
-    });
-
-    if (cotizaciones > 0) {
-      return res.status(400).json({
-        error: 'No se puede eliminar el proveedor porque tiene cotizaciones registradas',
+      return res.status(404).json({
+        error: 'Proveedor no encontrado',
       });
     }
 
-    await proveedor.destroy();
+    if (estaInactivo(proveedor)) {
+      return res.status(400).json({
+        error: 'El proveedor ya está inactivo',
+      });
+    }
 
-    res.json({ message: 'Proveedor eliminado exitosamente' });
+    await proveedor.update({
+      nombre: `${INACTIVO_PREFIX} ${proveedor.nombre}`,
+    });
+
+    res.json({
+      message: 'Proveedor desactivado exitosamente',
+      data: proveedor,
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al desactivar proveedor',
+      detalle: error.message,
+    });
   }
 };
 
 // GET /api/proveedores/:id/cotizaciones
 const getCotizacionesByProveedor = async (req, res) => {
   try {
-    const proveedor = await Proveedor.findByPk(req.params.id);
+    const proveedor = await Proveedor.findOne({
+      where: {
+        id_proveedor: req.params.id,
+        ...whereActivo,
+      },
+    });
 
     if (!proveedor) {
-      return res.status(404).json({ error: 'Proveedor no encontrado' });
+      return res.status(404).json({
+        error: 'Proveedor no encontrado o inactivo',
+      });
     }
 
     const cotizaciones = await Cotizacion.findAll({
@@ -142,19 +248,33 @@ const getCotizacionesByProveedor = async (req, res) => {
       order: [['id_cotizacion', 'DESC']],
     });
 
+    if (cotizaciones.length === 0) {
+      return res.status(204).send();
+    }
+
     res.json(cotizaciones);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al obtener cotizaciones del proveedor',
+      detalle: error.message,
+    });
   }
 };
 
 // GET /api/proveedores/:id/proyectos
 const getProyectosByProveedor = async (req, res) => {
   try {
-    const proveedor = await Proveedor.findByPk(req.params.id);
+    const proveedor = await Proveedor.findOne({
+      where: {
+        id_proveedor: req.params.id,
+        ...whereActivo,
+      },
+    });
 
     if (!proveedor) {
-      return res.status(404).json({ error: 'Proveedor no encontrado' });
+      return res.status(404).json({
+        error: 'Proveedor no encontrado o inactivo',
+      });
     }
 
     const proyectos = await Proyecto.findAll({
@@ -179,19 +299,33 @@ const getProyectosByProveedor = async (req, res) => {
       order: [['id_proyecto', 'DESC']],
     });
 
+    if (proyectos.length === 0) {
+      return res.status(204).send();
+    }
+
     res.json(proyectos);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al obtener proyectos del proveedor',
+      detalle: error.message,
+    });
   }
 };
 
 // GET /api/proveedores/:id/estadisticas
 const getEstadisticasProveedor = async (req, res) => {
   try {
-    const proveedor = await Proveedor.findByPk(req.params.id);
+    const proveedor = await Proveedor.findOne({
+      where: {
+        id_proveedor: req.params.id,
+        ...whereActivo,
+      },
+    });
 
     if (!proveedor) {
-      return res.status(404).json({ error: 'Proveedor no encontrado' });
+      return res.status(404).json({
+        error: 'Proveedor no encontrado o inactivo',
+      });
     }
 
     const totalCotizaciones = await Cotizacion.count({
@@ -274,7 +408,10 @@ const getEstadisticasProveedor = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al obtener estadísticas del proveedor',
+      detalle: error.message,
+    });
   }
 };
 
@@ -284,7 +421,10 @@ const validarRtnProveedor = async (req, res) => {
     const { rtn } = req.params;
 
     const proveedor = await Proveedor.findOne({
-      where: { rtn },
+      where: {
+        rtn,
+        ...whereActivo,
+      },
     });
 
     res.json({
@@ -292,7 +432,10 @@ const validarRtnProveedor = async (req, res) => {
       data: proveedor,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al validar RTN del proveedor',
+      detalle: error.message,
+    });
   }
 };
 
@@ -303,13 +446,22 @@ const addTelefonoProveedor = async (req, res) => {
     const { telefono } = req.body;
 
     if (!telefono) {
-      return res.status(400).json({ error: 'El teléfono es requerido' });
+      return res.status(400).json({
+        error: 'El teléfono es requerido',
+      });
     }
 
-    const proveedor = await Proveedor.findByPk(id);
+    const proveedor = await Proveedor.findOne({
+      where: {
+        id_proveedor: id,
+        ...whereActivo,
+      },
+    });
 
     if (!proveedor) {
-      return res.status(404).json({ error: 'Proveedor no encontrado' });
+      return res.status(404).json({
+        error: 'Proveedor no encontrado o inactivo',
+      });
     }
 
     const telefonoExistente = await TelefonoProveedor.findOne({
@@ -335,7 +487,10 @@ const addTelefonoProveedor = async (req, res) => {
       data: nuevoTelefono,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al agregar teléfono al proveedor',
+      detalle: error.message,
+    });
   }
 };
 
@@ -343,6 +498,20 @@ const addTelefonoProveedor = async (req, res) => {
 const deleteTelefonoProveedor = async (req, res) => {
   try {
     const { id, telefono } = req.params;
+
+    const proveedor = await Proveedor.findOne({
+      where: {
+        id_proveedor: id,
+        ...whereActivo,
+      },
+    });
+
+    if (!proveedor) {
+      return res.status(404).json({
+        error: 'Proveedor no encontrado o inactivo',
+      });
+    }
+
     const telefonoProveedor = await TelefonoProveedor.findOne({
       where: {
         id_proveedor: id,
@@ -355,13 +524,17 @@ const deleteTelefonoProveedor = async (req, res) => {
         error: 'Teléfono no encontrado para este proveedor',
       });
     }
+
     await telefonoProveedor.destroy();
 
     res.json({
       message: 'Teléfono eliminado exitosamente',
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      error: 'Error interno al eliminar teléfono del proveedor',
+      detalle: error.message,
+    });
   }
 };
 

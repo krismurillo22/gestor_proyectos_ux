@@ -1,33 +1,29 @@
 /evaluaciones:
   get:
-    summary: Listar todas las evaluaciones
+    summary: Listar todas las evaluaciones activas
+    description: Retorna únicamente evaluaciones que no están marcadas con [INACTIVA].
     tags: [Evaluaciones]
     responses:
       '200':
-        description: Lista de evaluaciones
+        description: Lista de evaluaciones activas
         content:
           application/json:
             example:
               - id_proyecto: 1
                 rating: 5
                 descripcion: Excelente trabajo
-                proyecto:
-                  id_proyecto: 1
-                  id_cotizacion: 1
-                  descripcion: Construcción de oficinas
-                  fecha_inicio: "2026-05-01T00:00:00.000Z"
-                  fecha_vencimiento: "2026-08-01T00:00:00.000Z"
-                  fecha_fin_real: null
-                  estado: completado
+      '204':
+        description: No existen evaluaciones activas registradas
       '500':
         description: Error del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al obtener las evaluaciones
 
   post:
     summary: Crear una evaluación
+    description: Crea una evaluación para un proyecto existente. Cada proyecto solo puede tener una evaluación.
     tags: [Evaluaciones]
     requestBody:
       required: true
@@ -41,17 +37,18 @@
             properties:
               id_proyecto:
                 type: integer
-                minimum: 1
+                description: ID del proyecto que será evaluado.
                 example: 1
               rating:
                 type: integer
                 minimum: 1
                 maximum: 5
+                description: Calificación de 1 a 5.
                 example: 5
               descripcion:
                 type: string
                 nullable: true
-                maxLength: 255
+                description: Comentario opcional de la evaluación.
                 example: Excelente trabajo
     responses:
       '201':
@@ -92,151 +89,18 @@
         content:
           application/json:
             example:
-              error: Error del servidor
-
-/evaluaciones/ranking/proveedores:
-  get:
-    summary: Obtener ranking de proveedores por evaluación
-    tags: [Evaluaciones]
-    responses:
-      '200':
-        description: Ranking de proveedores
-        content:
-          application/json:
-            example:
-              - id_proveedor: 1
-                proveedor: Proveedor ABC
-                rtn: "0801-1990-00123"
-                rating_promedio: 4.8
-                total_evaluaciones: 5
-              - id_proveedor: 2
-                proveedor: Proveedor XYZ
-                rtn: "0801-1991-00999"
-                rating_promedio: 4.3
-                total_evaluaciones: 3
-      '500':
-        description: Error del servidor
-        content:
-          application/json:
-            example:
-              error: Error del servidor
-
-/evaluaciones/proyecto/{id_proyecto}:
-  get:
-    summary: Obtener evaluación por ID de proyecto
-    tags: [Evaluaciones]
-    parameters:
-      - name: id_proyecto
-        in: path
-        required: true
-        description: ID del proyecto
-        schema:
-          type: integer
-          minimum: 1
-          example: 1
-    responses:
-      '200':
-        description: Evaluación encontrada
-        content:
-          application/json:
-            example:
-              id_proyecto: 1
-              rating: 5
-              descripcion: Excelente trabajo
-              proyecto:
-                id_proyecto: 1
-                id_cotizacion: 1
-                descripcion: Construcción de oficinas
-                fecha_inicio: "2026-05-01T00:00:00.000Z"
-                fecha_vencimiento: "2026-08-01T00:00:00.000Z"
-                fecha_fin_real: null
-                estado: completado
-      '404':
-        description: El proyecto no tiene evaluación registrada
-        content:
-          application/json:
-            example:
-              error: Este proyecto no tiene evaluación registrada
-      '500':
-        description: Error del servidor
-        content:
-          application/json:
-            example:
-              error: Error del servidor
-
-/evaluaciones/proyecto/{id_proyecto}/existe:
-  get:
-    summary: Validar si un proyecto tiene evaluación
-    tags: [Evaluaciones]
-    parameters:
-      - name: id_proyecto
-        in: path
-        required: true
-        description: ID del proyecto
-        schema:
-          type: integer
-          minimum: 1
-          example: 1
-    responses:
-      '200':
-        description: Resultado de validación
-        content:
-          application/json:
-            example:
-              existe: true
-              id_proyecto: 1
-      '500':
-        description: Error del servidor
-        content:
-          application/json:
-            example:
-              error: Error del servidor
-
-/evaluaciones/proveedor/{id_proveedor}/promedio:
-  get:
-    summary: Obtener promedio de evaluación de un proveedor
-    tags: [Evaluaciones]
-    parameters:
-      - name: id_proveedor
-        in: path
-        required: true
-        description: ID del proveedor
-        schema:
-          type: integer
-          minimum: 1
-          example: 1
-    responses:
-      '200':
-        description: Promedio de evaluación del proveedor
-        content:
-          application/json:
-            example:
-              id_proveedor: 1
-              proveedor: Proveedor ABC
-              rating_promedio: 4.75
-              total_evaluaciones: 4
-      '404':
-        description: Proveedor no encontrado
-        content:
-          application/json:
-            example:
-              error: Proveedor no encontrado
-      '500':
-        description: Error del servidor
-        content:
-          application/json:
-            example:
-              error: Error del servidor
+              error: Error interno al crear la evaluación
 
 /evaluaciones/{id}:
   get:
-    summary: Obtener una evaluación por ID
+    summary: Obtener una evaluación activa por ID
+    description: El ID corresponde al id_proyecto. Solo retorna evaluaciones activas.
     tags: [Evaluaciones]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID de la evaluación. En este modelo corresponde al id_proyecto.
+        description: ID de la evaluación. Corresponde al id_proyecto.
         schema:
           type: integer
           minimum: 1
@@ -250,16 +114,8 @@
               id_proyecto: 1
               rating: 5
               descripcion: Excelente trabajo
-              proyecto:
-                id_proyecto: 1
-                id_cotizacion: 1
-                descripcion: Construcción de oficinas
-                fecha_inicio: "2026-05-01T00:00:00.000Z"
-                fecha_vencimiento: "2026-08-01T00:00:00.000Z"
-                fecha_fin_real: null
-                estado: completado
       '404':
-        description: Evaluación no encontrada
+        description: Evaluación no encontrada o inactiva
         content:
           application/json:
             example:
@@ -269,16 +125,17 @@
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al obtener la evaluación
 
-  put:
-    summary: Actualizar una evaluación
+  patch:
+    summary: Actualizar parcialmente una evaluación
+    description: Permite modificar rating y/o descripción. No permite modificar evaluaciones inactivas.
     tags: [Evaluaciones]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID de la evaluación. En este modelo corresponde al id_proyecto.
+        description: ID de la evaluación. Corresponde al id_proyecto.
         schema:
           type: integer
           minimum: 1
@@ -294,11 +151,12 @@
                 type: integer
                 minimum: 1
                 maximum: 5
+                description: Nueva calificación de la evaluación.
                 example: 4
               descripcion:
                 type: string
                 nullable: true
-                maxLength: 255
+                description: Nueva descripción de la evaluación.
                 example: Buen trabajo, pero con retrasos menores
     responses:
       '200':
@@ -312,43 +170,59 @@
                 rating: 4
                 descripcion: Buen trabajo, pero con retrasos menores
       '400':
-        description: Rating inválido
+        description: Datos inválidos
         content:
           application/json:
-            example:
-              error: El rating debe estar entre 1 y 5
+            examples:
+              ratingInvalido:
+                value:
+                  error: El rating debe estar entre 1 y 5
+              bodyVacio:
+                value:
+                  error: Debe enviar al menos un campo para actualizar
       '404':
-        description: Evaluación no encontrada
+        description: Evaluación no encontrada o inactiva
         content:
           application/json:
             example:
-              error: Evaluación no encontrada
+              error: Evaluación no encontrada o inactiva
       '500':
         description: Error del servidor
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al actualizar la evaluación
 
   delete:
-    summary: Eliminar una evaluación
+    summary: Desactivar una evaluación
+    description: No elimina físicamente la evaluación. La marca como inactiva usando [INACTIVA] en la descripción.
     tags: [Evaluaciones]
     parameters:
       - name: id
         in: path
         required: true
-        description: ID de la evaluación. En este modelo corresponde al id_proyecto.
+        description: ID de la evaluación. Corresponde al id_proyecto.
         schema:
           type: integer
           minimum: 1
           example: 1
     responses:
       '200':
-        description: Evaluación eliminada exitosamente
+        description: Evaluación desactivada exitosamente
         content:
           application/json:
             example:
-              message: Evaluación eliminada exitosamente
+              message: Evaluación desactivada exitosamente
+              data:
+                id_proyecto: 1
+                rating: 5
+                descripcion: "[INACTIVA] Excelente trabajo"
+      '400':
+        description: La evaluación ya está inactiva
+        content:
+          application/json:
+            example:
+              error: La evaluación ya está inactiva
       '404':
         description: Evaluación no encontrada
         content:
@@ -360,4 +234,144 @@
         content:
           application/json:
             example:
-              error: Error del servidor
+              error: Error interno al desactivar la evaluación
+
+/evaluaciones/proyecto/{id_proyecto}:
+  get:
+    summary: Obtener evaluación activa por proyecto
+    description: Busca la evaluación activa asociada a un proyecto específico.
+    tags: [Evaluaciones]
+    parameters:
+      - name: id_proyecto
+        in: path
+        required: true
+        description: ID del proyecto.
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Evaluación encontrada
+        content:
+          application/json:
+            example:
+              id_proyecto: 1
+              rating: 5
+              descripcion: Excelente trabajo
+      '404':
+        description: Este proyecto no tiene evaluación activa registrada
+        content:
+          application/json:
+            example:
+              error: Este proyecto no tiene evaluación registrada
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al obtener la evaluación del proyecto
+
+/evaluaciones/proyecto/{id_proyecto}/existe:
+  get:
+    summary: Validar si un proyecto tiene evaluación activa
+    description: Retorna true o false dependiendo de si existe una evaluación activa para el proyecto.
+    tags: [Evaluaciones]
+    parameters:
+      - name: id_proyecto
+        in: path
+        required: true
+        description: ID del proyecto.
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Resultado de validación
+        content:
+          application/json:
+            examples:
+              existe:
+                value:
+                  existe: true
+                  id_proyecto: 1
+              noExiste:
+                value:
+                  existe: false
+                  id_proyecto: 1
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al validar la evaluación
+
+/evaluaciones/proveedor/{id_proveedor}/promedio:
+  get:
+    summary: Obtener promedio de evaluaciones activas de un proveedor
+    description: Calcula el promedio de rating del proveedor usando solo evaluaciones activas.
+    tags: [Evaluaciones]
+    parameters:
+      - name: id_proveedor
+        in: path
+        required: true
+        description: ID del proveedor.
+        schema:
+          type: integer
+          minimum: 1
+          example: 1
+    responses:
+      '200':
+        description: Promedio de evaluación del proveedor
+        content:
+          application/json:
+            example:
+              id_proveedor: 1
+              proveedor: Proveedor ABC
+              rating_promedio: 4.75
+              total_evaluaciones: 4
+      '204':
+        description: El proveedor no posee evaluaciones activas
+      '404':
+        description: Proveedor no encontrado
+        content:
+          application/json:
+            example:
+              error: Proveedor no encontrado
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al obtener promedio del proveedor
+
+/evaluaciones/ranking/proveedores:
+  get:
+    summary: Obtener ranking de proveedores por evaluaciones activas
+    description: Lista proveedores ordenados por promedio de rating, usando solo evaluaciones activas.
+    tags: [Evaluaciones]
+    responses:
+      '200':
+        description: Ranking de proveedores
+        content:
+          application/json:
+            example:
+              - id_proveedor: 1
+                proveedor: Proveedor ABC
+                rtn: "0801-1990-00123"
+                rating_promedio: 4.8
+                total_evaluaciones: 5
+              - id_proveedor: 2
+                proveedor: Proveedor XYZ
+                rtn: "0801-1995-00456"
+                rating_promedio: 4.3
+                total_evaluaciones: 3
+      '204':
+        description: No existen proveedores con evaluaciones activas
+      '500':
+        description: Error del servidor
+        content:
+          application/json:
+            example:
+              error: Error interno al obtener ranking de proveedores

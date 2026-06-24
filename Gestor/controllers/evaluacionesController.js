@@ -2,10 +2,26 @@
 
 const { Evaluacion, Proyecto, Cotizacion, Proveedor } = require('../models');
 
+const { Op } = require('sequelize');
+
+const INACTIVA_PREFIX = '[INACTIVA]';
+
+const whereActiva = {
+  [Op.or]: [
+    { descripcion: null },
+    { descripcion: { [Op.notLike]: `${INACTIVA_PREFIX}%` } },
+  ],
+};
+
+const estaInactiva = (evaluacion) => {
+  return evaluacion.descripcion?.startsWith(INACTIVA_PREFIX);
+};
+
 // GET /api/evaluaciones
 const getEvaluaciones = async (req, res) => {
   try {
     const evaluaciones = await Evaluacion.findAll({
+      where: whereActiva,
       include: [
         {
           model: Proyecto,
@@ -23,14 +39,18 @@ const getEvaluaciones = async (req, res) => {
 // GET /api/evaluaciones/:id
 const getEvaluacionById = async (req, res) => {
   try {
-    const evaluacion = await Evaluacion.findByPk(req.params.id, {
-      include: [
-        {
-          model: Proyecto,
-          as: 'proyecto',
+      const evaluacion = await Evaluacion.findOne({
+        where: {
+          id_proyecto: req.params.id,
+          ...whereActiva,
         },
-      ],
-    });
+        include: [
+          {
+            model: Proyecto,
+            as: 'proyecto',
+          },
+        ],
+      });
 
     if (!evaluacion) {
       return res.status(404).json({ error: 'Evaluación no encontrada' });
@@ -95,21 +115,21 @@ const updateEvaluacion = async (req, res) => {
   try {
     const evaluacion = await Evaluacion.findByPk(req.params.id);
 
-    if (!evaluacion) {
-      return res.status(404).json({ error: 'Evaluación no encontrada' });
+    if (!evaluacion || estaInactiva(evaluacion)) {
+      return res.status(404).json({ error: 'Evaluación no encontrada o inactiva' });
     }
 
     const { rating, descripcion } = req.body;
 
-    if (rating && (rating < 1 || rating > 5)) {
+    if (rating !== undefined && (rating < 1 || rating > 5)) {
       return res.status(400).json({
         error: 'El rating debe estar entre 1 y 5',
       });
     }
 
     await evaluacion.update({
-      rating,
-      descripcion,
+      ...(rating !== undefined && { rating }),
+      ...(descripcion !== undefined && { descripcion }),
     });
 
     res.json({
@@ -130,9 +150,18 @@ const deleteEvaluacion = async (req, res) => {
       return res.status(404).json({ error: 'Evaluación no encontrada' });
     }
 
-    await evaluacion.destroy();
+    if (estaInactiva(evaluacion)) {
+      return res.status(400).json({ error: 'La evaluación ya está inactiva' });
+    }
 
-    res.json({ message: 'Evaluación eliminada exitosamente' });
+    await evaluacion.update({
+      descripcion: `${INACTIVA_PREFIX} ${evaluacion.descripcion || 'Evaluación desactivada'}`,
+    });
+
+    res.json({
+      message: 'Evaluación desactivada exitosamente',
+      data: evaluacion,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -142,9 +171,11 @@ const deleteEvaluacion = async (req, res) => {
 const getEvaluacionByProyecto = async (req, res) => {
   try {
     const { id_proyecto } = req.params;
-
     const evaluacion = await Evaluacion.findOne({
-      where: { id_proyecto },
+      where: {
+        id_proyecto,
+        ...whereActiva,
+      },
       include: [
         {
           model: Proyecto,
@@ -170,7 +201,12 @@ const existeEvaluacionProyecto = async (req, res) => {
   try {
     const { id_proyecto } = req.params;
 
-    const evaluacion = await Evaluacion.findByPk(id_proyecto);
+    const evaluacion = await Evaluacion.findOne({
+      where: {
+        id_proyecto,
+        ...whereActiva,
+      },
+    });
 
     res.json({
       existe: !!evaluacion,
@@ -193,6 +229,7 @@ const getPromedioProveedor = async (req, res) => {
     }
 
     const evaluaciones = await Evaluacion.findAll({
+      where: whereActiva,
       include: [
         {
           model: Proyecto,
@@ -247,6 +284,7 @@ const getRankingProveedores = async (req, res) => {
                   model: Evaluacion,
                   as: 'evaluacion',
                   required: false,
+                  where: whereActiva,
                 },
               ],
             },
